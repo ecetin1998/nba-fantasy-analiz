@@ -183,7 +183,7 @@ with st.expander("📥 Oyuncu verisi · NBA'den yenile / CSV yükle", expanded=F
     with left:
         st.markdown("**NBA istatistikleri**")
         st.caption("Seçili sezonun normal sezon toplamlarını stats.nba.com üzerinden alır. Bazen 403 / zaman aşımı olabilir.")
-        if st.button("NBA verisini çek / yenile", use_container_width=True):
+        if st.button("Gerçek sezon maçlarını çek / yenile", use_container_width=True):
             try:
                 with st.spinner("NBA oyuncu verileri alınıyor..."):
                     result = fetch_nba_totals(season)
@@ -304,6 +304,31 @@ if team_type == "PTS":
 
 if players is not None:
     selected = players[players["PLAYER_ID"].isin(set(resolved_roster_ids) - set(resolved_il_ids))].copy()
+
+    if season == PROJECTION_SEASON:
+        with tab_analysis:
+            st.markdown("**⏱️ Beklenen rol ve dakika**")
+            if selected.empty:
+                st.caption("Oyuncularını üstteki Kadrom alanından eklediğinde rol tahminlerini burada görebilirsin.")
+            else:
+                role_frame = selected.copy()
+                role_frame["Dakika profili"] = pd.cut(role_frame["MIN_PG"], bins=[-1, 15, 23, 29, 100],
+                    labels=["Sınırlı", "Rotasyon", "Yüksek rotasyon", "Yüksek dakika"])
+                role_frame["GP_ACTUAL"] = pd.to_numeric(role_frame.get("GP_ACTUAL", 0), errors="coerce").fillna(0)
+                role_cols = ["PLAYER_NAME", "TEAM_ABBREVIATION", "MIN_PG", "GP",
+                             "Dakika profili", "GP_ACTUAL"]
+                if "ROLE_SIGNAL" in role_frame.columns:
+                    role_cols.append("ROLE_SIGNAL")
+                if "MIN_DELTA" in role_frame.columns:
+                    role_cols.append("MIN_DELTA")
+                st.dataframe(role_frame[role_cols].rename(columns={
+                    "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA Takımı",
+                    "MIN_PG": "Tahmini/Karma DK", "GP": "Tahmini maç",
+                    "GP_ACTUAL": "Oynanan maç", "ROLE_SIGNAL": "Dakika sinyali",
+                    "MIN_DELTA": "Gerçek − tahmin DK"}).sort_values("Tahmini/Karma DK", ascending=False),
+                    hide_index=True, use_container_width=True)
+                st.caption("Dakika profili yalnızca tahmini maç başına süreye göre sınıflanır; "
+                           "kesin ilk beş veya sağlık garantisi değildir.")
 
     if team_type == "CAT":
         with tab_analysis:
