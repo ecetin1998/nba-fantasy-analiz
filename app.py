@@ -314,7 +314,9 @@ if players is not None:
                 role_frame = selected.copy()
                 role_frame["Dakika profili"] = pd.cut(role_frame["MIN_PG"], bins=[-1, 15, 23, 29, 100],
                     labels=["Sınırlı", "Rotasyon", "Yüksek rotasyon", "Yüksek dakika"])
-                role_frame["GP_ACTUAL"] = pd.to_numeric(role_frame.get("GP_ACTUAL", 0), errors="coerce").fillna(0)
+                if "GP_ACTUAL" not in role_frame.columns:
+                    role_frame["GP_ACTUAL"] = 0
+                role_frame["GP_ACTUAL"] = pd.to_numeric(role_frame["GP_ACTUAL"], errors="coerce").fillna(0)
                 role_cols = ["PLAYER_NAME", "TEAM_ABBREVIATION", "MIN_PG", "GP",
                              "Dakika profili", "GP_ACTUAL"]
                 if "ROLE_SIGNAL" in role_frame.columns:
