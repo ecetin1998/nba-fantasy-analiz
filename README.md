@@ -31,6 +31,19 @@ Uygulamayı açınca **👥 Kadrom** ekranı en üstte görünür; veri çekmek 
 
 **Uyarı:** Bu ilk sürümde Streamlit Cloud kayıtları yerel SQLite'dır. Sunucu restart/deploy sırasında kadrolar kaybolabilir; ayrıca herkese açık uygulamada giriş koruması yoktur. Kalıcı güvenli kadro depolama sonraki sürüm kapsamındadır.
 
+## Arayüz v2 (2026–27)
+
+Uygulama tek sezon (2026–27) için çalışır; sezon seçimi ve sol menü kaldırıldı. Üst alanda fantasy takımı, lig türü/ID, kadro–IL–veri durumu özetleri bulunur.
+
+- **Kadrom:** 15 oyuncuya kadar adla seçim, 2 IL oyuncusu, kayıtlı kadro tablosu ve yalnızca değişiklik varsa etkin Kaydet butonu. Listede olmayan oyuncu ekleme kapalı bir yardımcı bölümde.
+- **Analiz:** kategori dengesi ve punt değerlendirmesi veya Points kadro puanları; beklenen rol/dakika.
+- **Radar:** birinci sıradan itibaren **tam** oyuncu sıralaması; kadro dışındaki herkes için ayrı takıma uyum önerisi; arama.
+- **Veri:** FantasyPros projeksiyonları ve gerçek NBA verisi içe aktarma, CSV şablonları, kadro yedeği, Points ayarları, demo modu.
+
+Mobil görünüm dar başlık, kısaltılmış dört sekmeli menü, kompakt metrik kartları ve yatay gezilebilir geniş tablolar kullanır. Bütün etkileşimler Streamlit bileşenleridir. Tasarım dosyası `ui_theme.py` içindedir; `.streamlit/config.toml` yerel widget renklerini ayarlar.
+
+**Sınırlama:** Bu sürümün GitHub testleri Streamlit bileşenlerini otomatik çalıştırır fakat gerçek cihaz tarayıcı ekran görüntüsü kontrolünün yerini tutmaz.
+
 ## 2026–27 projeksiyon motoru (v0.4)
 
 Varsayılan analiz sezonu **2026–27**. Açılışta mevcutsa kayıtlı projeksiyon kullanılır; yoksa uygulama doğrudan [FantasyPros 2026–27 uzman konsensüsü](https://www.fantasypros.com/nba/projections/avg-overall.php) sayfasındaki herkese açık **maç başı** tahminleri yüklemeyi dener. Kayıt 24 saati geçtiğinde kullanıcı oturumunda bir kez tazeleme denenir. **Bu arka planda zamanlanmış bir görev değildir**; uygulama açıkken çalışır. Kaynak Cloud IP'sinden erişime izin vermeyebilir veya sayfa formatını değiştirebilir. Son başarılı veri bozulmadan kalır; olmazsa CSV yüklemek gerekir. Kaynak verileri GitHub deposuna konulmaz.
