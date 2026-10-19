@@ -175,6 +175,13 @@ if season == PROJECTION_SEASON:
                     st.rerun()
                 except Exception as exc:
                     st.error(f"Projeksiyon CSV'si geçersiz: {exc}")
+        projection_template = Path(__file__).resolve().parent / "sample_data" / "projection_template.csv"
+        st.download_button(
+            "📄 Projeksiyon CSV şablonunu indir",
+            data=projection_template.read_bytes(),
+            file_name="nba_2026_27_projection_template.csv",
+            mime="text/csv",
+        )
         st.caption("FG%/FT% notu: FantasyPros'un ücretsiz tablosunda şut denemeleri yok. "
                    "FGA/FTA için geçici tahmini hacim kullanılır; bu değerler kaynak tahmini değildir.")
 
