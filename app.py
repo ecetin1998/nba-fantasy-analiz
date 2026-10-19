@@ -14,7 +14,7 @@ import streamlit as st
 from analysis import (CATEGORIES, POINTS_FIELDS, category_punt_view, category_team_fit,
                       category_scores, normalize, points_scores, roster_analysis)
 from data_sources import fetch_nba_totals, last_updated, load_cache, save_csv
-from projection_engine import PROJECTION_SEASON, SOURCE_URL, blend_with_actual, fetch_fantasypros, load_projection, save_projection
+from projection_engine import PROJECTION_SEASON, SOURCE_URL, blend_with_actual, fetch_fantasypros, load_projection, projection_cache_age_hours, save_projection
 from roster_catalog import bundled_catalog, display_name, find_catalog_player, resolve_roster_ids
 from storage import (TEAMS, YAHOO_DEFAULT_POINTS, get_roster, get_weights,
                      init, reset_weights, save_roster, save_weights)
@@ -218,13 +218,20 @@ try:
         st.warning("DEMO MODU — Bu oyuncular ve istatistikler tamamen yapaydır. Gerçek NBA analizi değildir.")
     elif season == PROJECTION_SEASON:
         projected = load_projection()
-        if projected is None:
+        hours_old = projection_cache_age_hours()
+        needs_refresh = projected is None or (hours_old is not None and hours_old > 24)
+        if needs_refresh and not st.session_state.get("auto_projection_checked"):
+            st.session_state["auto_projection_checked"] = True
             try:
-                with st.spinner("2026–27 projeksiyonları ilk kez alınıyor..."):
+                with st.spinner("2026–27 uzman projeksiyonları güncelleniyor..."):
                     projected = fetch_fantasypros(timeout=12)
             except Exception as exc:
-                st.warning(f"Projeksiyon kaynağına ulaşılamadı: {exc}. "
-                           "Yukarıdaki CSV projeksiyon yüklemesini kullanabilirsin.")
+                st.warning(f"Projeksiyon kaynağına erişilemedi: {exc}. "
+                           "Önceki önbellek varsa korunur; yoksa yukarıdaki CSV seçeneğini kullan.")
+                projected = load_projection()
+        if projected is not None and hours_old is not None and hours_old > 36:
+            st.warning(f"Son başarılı projeksiyon yenilemesi yaklaşık {hours_old:.0f} saat önce. "
+                       "İnternet kaynağı yanıt vermezse bu veri kullanılmaya devam eder.")
         actual = load_cache(PROJECTION_SEASON)
         raw = blend_with_actual(projected, actual) if projected is not None else actual
         basis = ("2026–27 FantasyPros projeksiyon + gerçek NBA verisi" if actual is not None
