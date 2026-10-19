@@ -48,7 +48,9 @@ Maçlar oynandığında 2026–27 **gerçek sezon** CSV'si / NBA API verisi geld
 - 9-cat: PTS, REB, AST, STL, BLK, 3PM, FG%, FT%, TO için z-score, ilk punt taraması ve kategori bazlı kadro uyumu.
 - FG%/FT% oyuncu yüzdelerinin basit ortalamasıyla değil; hacme göre FGM−refFG%×FGA ve FTM−refFT%×FTA katkısıyla puanlanır. TO düşük daha iyi olarak çevrilir.
 - Points: Yahoo varsayılan `PTS + 1.2 REB + 1.5 AST + 3 STL + 3 BLK − TO`; ekstra 3PM puanı yoktur. Özel katsayılar takım bazında ayarlanabilir.
-- NBA geneli oyuncu sıralaması ve takıma göre aday sıralaması.
+- NBA geneli oyuncu sıralaması **1. sıradan bütün oyunculara kadar** gösterilir. 36–185 aralığı ve ilk 50/120 sınırları kaldırıldı; isimle arama var.
+- Takıma özel öneriler, mevcut kadro oyuncularını çıkararak tüm oyuncu havuzunu değerlendirir. 9-cat'de ihtiyaç ağırlıklı skor, Points'de beklenen FPTS kullanılır.
+- Oyuncu pozisyonu/slotu özelliği şu an eklenmiyor; bu geliştirme isteği iptal edildi.
 - 2026–27 oyuncu bazlı sezon projeksiyonları, dakika ve oynanması beklenen maçlar.
 - Gerçek maçlar gelmeye başladığında oyuncu başına tahmin/gerçek karışımı.
 - Yerel SQLite kadro kayıtları; sezon toplamları CSV cache.
