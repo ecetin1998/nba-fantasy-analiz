@@ -125,6 +125,8 @@ def _projection_pg_to_totals(projected: pd.DataFrame) -> pd.DataFrame:
     p["ACTUAL_WEIGHT"] = 0.0
     p["FGA_PROXY"] = p.get("FGA_PROXY", False)
     p["FTA_PROXY"] = p.get("FTA_PROXY", False)
+    p["ROLE_SIGNAL"] = "Projeksiyon"
+    p["MIN_DELTA"] = 0.0
     return p
 
 
@@ -189,9 +191,14 @@ def blend_with_actual(projections: pd.DataFrame, actual: pd.DataFrame | None) ->
         record["GP_ACTUAL"] = int(r["GP"])
         record["ACTUAL_WEIGHT"] = weight
         record["BASIS"] = "BLEND" if weight < 1 else "ACTUAL"
-        if weight >= .4:
-            record["FGA_PROXY"] = False
-            record["FTA_PROXY"] = False
+        # Even with 85% real weight, shot-volume proxy can still affect the result.
+        # Retain the warning until genuine FGA/FTA projections replace it.
+        record["FGA_PROXY"] = bool(p.get("FGA_PROXY", False))
+        record["FTA_PROXY"] = bool(p.get("FTA_PROXY", False))
+        record["MIN_DELTA"] = float(r["MIN"]) / float(r["GP"]) - float(p["MIN"]) / float(p["GP"])
+        record["ROLE_SIGNAL"] = ("Dakika artışı" if record["MIN_DELTA"] >= 4 else
+                                 "Dakika düşüşü" if record["MIN_DELTA"] <= -4 else
+                                 "Stabil") if int(r["GP"]) >= 3 else "Erken örneklem"
         results.append(record)
     # New players without any projection: real game stats, small-sample warning in UI.
     for _, r in real.iterrows():
