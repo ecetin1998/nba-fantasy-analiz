@@ -130,6 +130,13 @@ def _projection_pg_to_totals(projected: pd.DataFrame) -> pd.DataFrame:
     return p
 
 
+def projection_cache_age_hours() -> float | None:
+    if not CACHE_FILE.exists():
+        return None
+    modified = datetime.fromtimestamp(CACHE_FILE.stat().st_mtime, tz=timezone.utc)
+    return max(0.0, (datetime.now(timezone.utc) - modified).total_seconds() / 3600.0)
+
+
 def load_projection() -> pd.DataFrame | None:
     if not CACHE_FILE.exists():
         return None
