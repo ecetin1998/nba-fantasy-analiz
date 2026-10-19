@@ -6,6 +6,7 @@ No Yahoo credentials required. nba_api supplies season totals when reachable.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -227,7 +228,7 @@ try:
         projected = load_projection()
         hours_old = projection_cache_age_hours()
         needs_refresh = projected is None or (hours_old is not None and hours_old > 24)
-        if needs_refresh and not st.session_state.get("auto_projection_checked"):
+        if needs_refresh and not st.session_state.get("auto_projection_checked") and os.getenv("FANTASY_OFFLINE_TEST") != "1":
             st.session_state["auto_projection_checked"] = True
             try:
                 with st.spinner("2026–27 uzman projeksiyonları güncelleniyor..."):
