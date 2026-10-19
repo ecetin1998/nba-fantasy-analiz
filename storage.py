@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from typing import Mapping, Sequence
 from pathlib import Path
+
+from lineup import BASE_POSITIONS, SLOTS, normalize_positions, validate_slot, slot_is_compatible
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "fantasy.sqlite3"
 # Official Yahoo 2026-27 Express Settings, Head-to-Head Points:
@@ -30,6 +33,12 @@ def init() -> None:
     with _db() as db:
         db.execute("CREATE TABLE IF NOT EXISTS rosters (team TEXT NOT NULL, player_id TEXT NOT NULL, is_il INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(team, player_id))")
         db.execute("CREATE TABLE IF NOT EXISTS config (team TEXT PRIMARY KEY, weights_json TEXT NOT NULL)")
+        # Non-destructive migration: existing saved teams and player rows are untouched.
+        columns = {row[1] for row in db.execute("PRAGMA table_info(rosters)").fetchall()}
+        if "positions" not in columns:
+            db.execute("ALTER TABLE rosters ADD COLUMN positions TEXT NOT NULL DEFAULT ''")
+        if "slot" not in columns:
+            db.execute("ALTER TABLE rosters ADD COLUMN slot TEXT NOT NULL DEFAULT ''")
 
 
 def get_roster(team: str) -> tuple[list[str], list[str]]:
@@ -38,16 +47,57 @@ def get_roster(team: str) -> tuple[list[str], list[str]]:
     return [r[0] for r in rows], [r[0] for r in rows if r[1]]
 
 
-def save_roster(team: str, selected: list[str], il: list[str]) -> None:
-    roster, inactive = list(dict.fromkeys(map(str, selected))), set(map(str, il))
+def get_roster_details(team: str) -> dict[str, dict]:
+    """Yahoo eligibility (manual) and unique daily lineup slot for this fantasy team."""
+    with _db() as db:
+        rows = db.execute(
+            "SELECT player_id, positions, slot FROM rosters WHERE team=?", (team,)
+        ).fetchall()
+    return {str(pid): {"positions": normalize_positions(pos) if pos else [],
+                        "slot": slot or ""} for pid, pos, slot in rows}
+
+
+def save_roster(team: str, selected: list[str], il: list[str],
+                positions: Mapping[str, Sequence[str] | str] | None = None,
+                slots: Mapping[str, str] | None = None) -> None:
+    """Save roster and metadata transactionally; legacy calls preserve existing positions/slots."""
+    roster = list(dict.fromkeys(map(str, selected)))
+    inactive = set(map(str, il))
     if len(roster) > 15:
         raise ValueError("Kadro sınırı 15 oyuncu")
-    if len(inactive.intersection(roster)) > 2:
-        raise ValueError("IL en fazla 2 oyuncu")
+    if len(inactive) > 2 or not inactive.issubset(set(roster)):
+        raise ValueError("IL en fazla 2 oyuncu ve kadronun bir parçası olmalı")
+    previous = get_roster_details(team)
+    positions = positions or {}
+    slots = slots or {}
+    metadata = []
+    taken_slots: set[str] = set()
+    il_order = [pid for pid in roster if pid in inactive]
+    for pid in roster:
+        old = previous.get(pid, {})
+        eligible = normalize_positions(positions.get(pid, old.get("positions", [])))
+        requested = str(slots.get(pid, old.get("slot", ""))).strip().upper()
+        if pid in inactive:
+            assigned = "IL" + str(il_order.index(pid) + 1)
+        else:
+            assigned = "" if requested.startswith("IL") else requested
+        validate_slot(assigned)
+        if assigned in taken_slots and assigned:
+            raise ValueError(f"Aynı kadro slotuna iki oyuncu atanamaz: {assigned}")
+        if assigned and assigned not in ("BN1", "BN2", "BN3", "IL1", "IL2"):
+            if not eligible:
+                raise ValueError(f"{pid}: aktif slota atamak için Yahoo pozisyonlarını gir")
+            if not slot_is_compatible(eligible, assigned):
+                raise ValueError(f"{pid}: {','.join(eligible)} oyuncusu {assigned} slotuna uygun değil")
+        if assigned:
+            taken_slots.add(assigned)
+        metadata.append((team, pid, int(pid in inactive), ",".join(eligible), assigned))
     with _db() as db:
         db.execute("DELETE FROM rosters WHERE team=?", (team,))
-        db.executemany("INSERT INTO rosters(team,player_id,is_il) VALUES(?,?,?)",
-                       [(team, pid, int(pid in inactive)) for pid in roster])
+        db.executemany(
+            "INSERT INTO rosters(team, player_id, is_il, positions, slot) VALUES (?,?,?,?,?)",
+            metadata,
+        )
 
 
 def get_weights(team: str) -> dict[str, float]:
