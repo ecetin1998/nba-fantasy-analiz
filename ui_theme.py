@@ -69,6 +69,9 @@ h3 {font-size:1.12rem !important;font-weight:720 !important;}
 .nba-brandline {display:flex;align-items:center;gap:11px;}
 .nba-brandmark {height:32px;width:32px;display:inline-flex;align-items:center;justify-content:center;
  border:1px solid rgba(125,244,201,.45);background:rgba(57,211,167,.14);border-radius:11px;font-size:17px;}
+.nba-build{display:inline-flex;align-items:center;gap:6px;border:1px solid #4bccb5;
+  border-radius:999px;padding:5px 11px;background:rgba(36,175,147,.13);
+  color:#a7ffe0;font-weight:780;font-size:.69rem;letter-spacing:.045em;}
 .nba-tag{display:inline-flex;align-items:center;border-radius:100px;border:1px solid #32545a;
  background:#143b3f;color:#8fe9d1;font-size:.77rem;padding:5px 10px;font-weight:720;white-space:nowrap;}
 .nba-muted{color:#9fb2ca;font-size:.82rem;line-height:1.6;}
@@ -114,10 +117,11 @@ def hero():
 <section class="nba-hero">
   <div class="nba-brandline">
     <span class="nba-brandmark">🏀</span>
-    <span class="nba-kicker">SEZON 2026–27 · FANTASY BASKETBOL</span>
+    <span class="nba-kicker">2026–27 · FANTASY BASKETBOL</span>
+    <span class="nba-build">● UI V2.1 · 19 EKİM</span>
   </div>
   <div class="nba-heading">NBA FANTASY <span>SCOUT</span></div>
-  <p class="nba-desc">Beş takımın, tek analiz merkezi. Veriyi takip et, kadronu güçlendir.</p>
+  <p class="nba-desc">Takımlarını yönet, oyuncuları karşılaştır, projeksiyonlarla avantaj yakala.</p>
 </section>
 """, unsafe_allow_html=True)
 
