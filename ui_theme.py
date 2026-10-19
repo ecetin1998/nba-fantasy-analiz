@@ -217,6 +217,66 @@ h3 {font-size:1.12rem !important;font-weight:720 !important;}
  .nba-podium-score small{display:block;margin:0;}
 }
 
+
+/* Premium navigation: four independently clickable Streamlit buttons.
+   Unlike segmented_control, selection is a filled pill, never an outline. */
+.st-key-premium_nav {max-width:640px;margin:10px 0 23px;}
+.st-key-premium_nav .nba-nav-label {
+ font-size:.67rem;font-weight:820;letter-spacing:.15em;color:#829ab6;
+ margin-bottom:8px;
+}
+.st-key-premium_nav [data-testid="stHorizontalBlock"] {
+ display:flex !important;flex-wrap:nowrap !important;
+ gap:4px !important;
+ padding:6px !important;
+ border:1px solid rgba(128,158,207,.22);
+ border-radius:20px;
+ background:linear-gradient(135deg,#121d30 0%,#172237 100%);
+ box-shadow:0 8px 24px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.03);
+}
+.st-key-premium_nav [data-testid="stColumn"] {min-width:0 !important;}
+.st-key-premium_nav .stButton {width:100%;}
+.st-key-premium_nav .stButton > button {
+ width:100% !important;
+ min-height:45px !important;
+ border:0 !important;
+ border-radius:14px !important;
+ font-size:.88rem !important;
+ font-weight:720 !important;
+ white-space:nowrap !important;
+ box-shadow:none !important;
+ transition:background .18s ease,color .18s ease,transform .18s ease;
+}
+.st-key-premium_nav .stButton > button[kind="secondary"] {
+ background:transparent !important;
+ color:#a4b6ce !important;
+}
+.st-key-premium_nav .stButton > button[kind="secondary"]:hover {
+ background:#24334a !important;color:#f4f8ff !important;
+}
+.st-key-premium_nav .stButton > button[kind="primary"] {
+ background:linear-gradient(115deg,#46e6bf 0%,#21c5a7 100%) !important;
+ color:#092032 !important;
+ box-shadow:0 4px 13px rgba(25,195,149,.18),inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+.st-key-premium_nav .stButton > button[kind="primary"]:hover {
+ background:linear-gradient(115deg,#75eed0,#3adabc) !important;
+}
+.st-key-premium_nav .stButton > button:focus-visible {
+ outline:2px solid #b8fbe2 !important;outline-offset:2px !important;
+}
+@media(max-width:700px) {
+ .st-key-premium_nav{max-width:100%;margin:7px 0 17px;}
+ .st-key-premium_nav [data-testid="stHorizontalBlock"]{gap:2px !important;padding:4px !important;border-radius:16px;}
+ .st-key-premium_nav .stButton > button{
+   min-height:40px !important;font-size:.78rem !important;
+   font-weight:730 !important;padding:6px 3px !important;border-radius:12px !important;
+ }
+ .st-key-premium_nav .nba-nav-label{font-size:.61rem;margin-bottom:7px;}
+}
+@media(max-width:360px) {
+ .st-key-premium_nav .stButton > button{font-size:.69rem !important;letter-spacing:-.025em;}
+}
 </style>
 """
 
