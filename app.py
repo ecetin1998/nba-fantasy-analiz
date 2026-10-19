@@ -86,9 +86,12 @@ with st.container(border=True):
     if st.button("💾 Kadroyu kaydet", type="primary", key=f"save_roster_{team_name}", use_container_width=True):
         try:
             save_roster(team_name, selected_roster, selected_il)
-            st.success(f"{team_name} kadrosu kaydedildi: {len(selected_roster)} oyuncu.")
+            st.session_state[f"just_saved_{team_name}"] = len(selected_roster)
+            st.rerun()
         except Exception as exc:
             st.error(str(exc))
+    if st.session_state.pop(f"just_saved_{team_name}", None) is not None:
+        st.success(f"{team_name} kadrosu kaydedildi.")
     if roster_ids:
         st.markdown("**Son kaydedilen kadro**")
         st.dataframe(pd.DataFrame({
@@ -143,7 +146,7 @@ except Exception as exc:
     st.error(f"Sezon verisi okunamadı: {exc}")
 
 if raw is None:
-    st.info("Başlamak için yukarıdan 'NBA verisini çek / yenile' butonuna bas veya CSV yükle. NBA API yanıt vermezse örnek veriyle arayüzü test edebilirsin.")
+    st.info("Kadronu yukarıdaki 👥 Kadrom bölümünden hemen seçip kaydedebilirsin. İstatistikli analiz ve sıralamalar için NBA sezon verisini çek veya CSV yükle.")
     sample = Path(__file__).resolve().parent / "sample_data" / "season_totals_template.csv"
     st.download_button("Boş CSV şablonunu indir", data=sample.read_bytes(),
                        file_name="nba_season_totals_template.csv", mime="text/csv")
