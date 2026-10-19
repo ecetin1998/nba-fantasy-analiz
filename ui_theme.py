@@ -66,7 +66,7 @@ h3 {font-size:1.12rem !important;font-weight:720 !important;}
 .nba-heading{font-size:clamp(1.82rem,4vw,2.53rem);font-weight:860;letter-spacing:-.045em;color:#fff;line-height:1.12;margin:10px 0 7px;}
 .nba-heading span {color:#6cefc7;}
 .nba-desc{color:#b8cddd;font-size:.88rem;margin:0;max-width:680px;}
-.nba-brandline {display:flex;align-items:center;gap:11px;}
+.nba-brandline {display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .nba-brandmark {height:32px;width:32px;display:inline-flex;align-items:center;justify-content:center;
  border:1px solid rgba(125,244,201,.45);background:rgba(57,211,167,.14);border-radius:11px;font-size:17px;}
 .nba-build{display:inline-flex;align-items:center;gap:6px;border:1px solid #4bccb5;
@@ -87,6 +87,8 @@ h3 {font-size:1.12rem !important;font-weight:720 !important;}
   .nba-hero{padding:18px 16px;border-radius:15px;margin-bottom:16px;}
   .nba-heading{font-size:1.81rem;}
   .nba-kicker{font-size:.62rem;letter-spacing:.1em;}
+  .nba-brandline {gap:7px;}
+  .nba-build {font-size:.61rem;padding:4px 8px;}
   .nba-desc{font-size:.81rem;}
   [data-testid="stMetric"] {padding:11px 12px;min-height:80px;}
   [data-testid="stMetricValue"] {font-size:1.27rem !important;}
