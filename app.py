@@ -38,19 +38,45 @@ proj_exists = (ROOT / "data" / "projection_2026-27.csv").exists()
 source_health = "Hazır" if proj_exists else "Bekliyor"
 team_overview(team_name, fmt, league_id, len(roster_ids), len(il_ids), source_health)
 
-# Short visible navigation labels are readable on narrow phones.
+# Real button navigation: independent of Streamlit's built-in segmented control.
+# The selected page is a session key, not a live widget key. Other page actions
+# can safely navigate here using their existing callbacks.
 NAV = {
     "Kadrom": "👥 Kadrom",
     "Analiz": "📊 Kadro Analizi",
     "Radar": "🔎 Oyuncu Radarı",
     "Veri": "⚙️ Veri Merkezi",
 }
-st.session_state.setdefault("nav_v2", "Kadrom")
-selected_nav = st.segmented_control(
-    "Bölüm", list(NAV), default="Kadrom", key="nav_v2",
-    label_visibility="collapsed", selection_mode="single",
-)
-page = NAV[selected_nav or "Kadrom"]
+NAV_BUTTONS = {
+    "Kadrom": "👥 Kadrom",
+    "Analiz": "📊 Analiz",
+    "Radar": "🔎 Radar",
+    "Veri": "⚙️ Veri",
+}
+
+
+def switch_section(section: str):
+    st.session_state["nav_v2"] = section
+
+
+if st.session_state.get("nav_v2") not in NAV:
+    st.session_state["nav_v2"] = "Kadrom"
+
+with st.container(key="premium_nav"):
+    st.markdown('<div class="nba-nav-label">ÇALIŞMA ALANI</div>', unsafe_allow_html=True)
+    nav_columns = st.columns(4, gap="small")
+    for column, nav_name in zip(nav_columns, NAV):
+        with column:
+            st.button(
+                NAV_BUTTONS[nav_name],
+                key=f"nav_button_{nav_name}",
+                type="primary" if nav_name == st.session_state["nav_v2"] else "secondary",
+                use_container_width=True,
+                on_click=switch_section,
+                args=(nav_name,),
+            )
+
+page = NAV[st.session_state["nav_v2"]]
 
 
 @st.cache_data(show_spinner=False)
