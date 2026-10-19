@@ -5,6 +5,7 @@ No Yahoo credentials required. nba_api supplies season totals when reachable.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -31,6 +32,50 @@ team_meta = next(t for t in TEAMS if t[0] == team_name)
 team_type = team_meta[2]
 st.sidebar.markdown(f"**{team_name}** · {'Standart 9-cat' if team_type == 'CAT' else 'Standart Yahoo Points'} · Lig {team_meta[1]}")
 st.sidebar.info("Her takımın kadrosu ayrı saklanır. Yahoo liginin rakip kadroları bilinmiyor.")
+
+with st.sidebar.expander("💾 Kadrolarımı yedekle / geri yükle"):
+    backup = {}
+    for saved_team in team_names:
+        ids, il = get_roster(saved_team)
+        backup[saved_team] = {"roster": ids, "il": il}
+    st.download_button(
+        "⬇️ Beş kadronun JSON yedeğini indir",
+        data=json.dumps(backup, ensure_ascii=False, indent=2).encode("utf-8"),
+        file_name="nba_fantasy_5_kadro_yedek.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    saved_file = st.file_uploader("JSON kadro yedeğini geri yükle", type=["json"], key="restore_json")
+    if saved_file is not None and st.button("📥 Yedekten geri yükle", key="restore_submit"):
+        try:
+            if saved_file.size > 250_000:
+                raise ValueError("Yedek dosyası çok büyük")
+            loaded = json.loads(saved_file.getvalue().decode("utf-8"))
+            if not isinstance(loaded, dict) or set(loaded) != set(team_names):
+                raise ValueError("Yedekte beş takımın tamamı bulunmalı")
+            checked = {}
+            for saved_team in team_names:
+                row = loaded[saved_team]
+                if not isinstance(row, dict):
+                    raise ValueError(f"{saved_team}: hatalı kayıt")
+                ids, il = row.get("roster"), row.get("il")
+                if not isinstance(ids, list) or not isinstance(il, list):
+                    raise ValueError(f"{saved_team}: liste bekleniyor")
+                if not all(isinstance(pid, str) and len(pid) < 150 for pid in ids + il):
+                    raise ValueError(f"{saved_team}: hatalı oyuncu kaydı")
+                if len(set(ids)) > 15 or len(set(il)) > 2 or not set(il).issubset(set(ids)):
+                    raise ValueError(f"{saved_team}: kadro/IL limitini aşıyor")
+                checked[saved_team] = (ids, il)
+            for saved_team, (ids, il) in checked.items():
+                save_roster(saved_team, ids, il)
+                st.session_state.pop(f"roster_input_{saved_team}", None)
+                st.session_state.pop(f"il_input_{saved_team}", None)
+            st.toast("Beş takımın kadrosu yedekten geri yüklendi.", icon="✅")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Yedek yüklenemedi: {exc}")
+
+
 
 # Kadro girmek, NBA istatistikleri indirilemese bile çalışır.
 @st.cache_data(show_spinner=False)
@@ -101,7 +146,7 @@ with st.container(border=True):
     else:
         st.info("Henüz kaydedilmiş oyuncu yok.")
     st.caption("⚠️ Streamlit Cloud üzerindeki yerel kayıt sistemi geçicidir: "
-               "sunucu yeniden başladığında kadrolar sıfırlanabilir. Kalıcı veritabanı sonraki geliştirmedir.")
+               "sunucu yeniden başladığında kadrolar sıfırlanabilir. Sol menüden JSON yedeğini indir. Kalıcı veritabanı sonraki geliştirmedir.")
 
 with st.expander("📥 Oyuncu verisi · NBA'den yenile / CSV yükle", expanded=False):
     left, right = st.columns(2)
