@@ -109,13 +109,22 @@ def data_for_analysis() -> tuple[pd.DataFrame | None, str, str | None]:
         return None, "Veri okunamadı", str(exc)
 
 
+def go_to_data_center():
+    # Callbacks run before widgets are instantiated; do not mutate live nav widget state.
+    st.session_state["nav_v2"] = "Veri"
+
+
+def activate_demo():
+    st.session_state["demo_data"] = pd.read_csv(ROOT / "sample_data" / "demo_season_totals.csv")
+    st.session_state["nav_v2"] = "Analiz"
+
+
 def no_data_message(error: str | None):
     st.warning("Analiz için henüz projeksiyon yüklenmemiş. Kadron kayıtlı kalır.")
     if error:
         st.caption("Kaynak bağlantısı: " + str(error)[:220])
-    if st.button("Projeksiyon kaynağına git →", type="primary"):
-        st.session_state["nav_v2"] = "Veri"
-        st.rerun()
+    st.button("Projeksiyon kaynağına git →", type="primary",
+              on_click=go_to_data_center)
 
 
 if page == "👥 Kadrom":
@@ -457,10 +466,7 @@ elif page == "⚙️ Veri Merkezi":
 
     with st.expander("🧪 Test amaçlı örnek veri"):
         st.warning("Buradaki veriler sentetiktir; NBA istatistikleri değildir.")
-        if st.button("Örnek veriyi aç"):
-            st.session_state["demo_data"] = pd.read_csv(ROOT / "sample_data" / "demo_season_totals.csv")
-            st.session_state["nav_v2"] = "Analiz"
-            st.rerun()
+        st.button("Örnek veriyi aç", on_click=activate_demo)
         if st.button("Örnek veri modunu kapat"):
             st.session_state.pop("demo_data", None)
             st.rerun()
