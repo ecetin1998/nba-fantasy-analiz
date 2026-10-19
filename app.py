@@ -119,8 +119,8 @@ def no_data_message(error: str | None):
 
 
 if page == "👥 Kadrom":
-    st.subheader("Kadromu düzenle")
-    st.caption("NBA verilerinin gelmesini beklemeden oyuncularını ekle. Her takımın kadrosu ayrıdır.")
+    st.subheader("Kadrom")
+    st.caption("Oyuncularını ara, ekle ve kaydet. Her fantasy takımının kadrosu ayrı tutulur.")
     catalog = player_directory()
     roster_key = f"roster_input_{team_name}"
     il_key = f"il_input_{team_name}"
@@ -129,25 +129,26 @@ if page == "👥 Kadrom":
             catalog[pid] = display_name(pid, catalog)
     catalog = dict(sorted(catalog.items(), key=lambda item: item[1].casefold()))
     with st.container(border=True):
-        with st.form(f"add_custom_{team_name}", clear_on_submit=True):
-            c_name, c_btn = st.columns([2.5, 1], vertical_alignment="bottom")
-            with c_name:
-                typed = st.text_input("Listede bulamazsan buraya yaz", placeholder="Oyuncunun tam adı")
-            with c_btn:
-                add = st.form_submit_button("➕ Oyuncu ekle", use_container_width=True)
-            if add:
-                if not typed.strip():
-                    st.warning("Önce oyuncunun adını yaz.")
-                else:
-                    current = list(st.session_state.get(roster_key, roster_ids))
-                    new_pid = find_catalog_player(typed.strip(), catalog)
-                    if new_pid in current:
-                        st.info("Bu oyuncu zaten seçili.")
-                    elif len(current) >= 15:
-                        st.error("Kadro sınırı 15 oyuncu.")
+        with st.expander("➕ Listede olmayan oyuncu ekle", expanded=False):
+            with st.form(f"add_custom_{team_name}", clear_on_submit=True):
+                c_name, c_btn = st.columns([2.5, 1], vertical_alignment="bottom")
+                with c_name:
+                    typed = st.text_input("Listede bulamazsan buraya yaz", placeholder="Oyuncunun tam adı")
+                with c_btn:
+                    add = st.form_submit_button("➕ Oyuncu ekle", use_container_width=True)
+                if add:
+                    if not typed.strip():
+                        st.warning("Önce oyuncunun adını yaz.")
                     else:
-                        st.session_state[roster_key] = current + [new_pid]
-                        st.rerun()
+                        current = list(st.session_state.get(roster_key, roster_ids))
+                        new_pid = find_catalog_player(typed.strip(), catalog)
+                        if new_pid in current:
+                            st.info("Bu oyuncu zaten seçili.")
+                        elif len(current) >= 15:
+                            st.error("Kadro sınırı 15 oyuncu.")
+                        else:
+                            st.session_state[roster_key] = current + [new_pid]
+                            st.rerun()
         selected = st.multiselect(
             "Oyuncularım (isim yazarak ara · en fazla 15)",
             list(catalog),
@@ -162,7 +163,8 @@ if page == "👥 Kadrom":
             placeholder="IL oyuncularını seç…", key=il_key,
         )
         pending = set(selected) != set(roster_ids) or set(injured) != set(il_ids)
-        st.caption(f"Seçili: {len(selected)}/15 oyuncu · {len(injured)}/2 IL")
+        st.progress(min(len(selected) / 15, 1.0), text=f"{len(selected)}/15 oyuncu seçildi")
+        st.caption(f"IL listesi: {len(injured)}/2 · Sadece değişiklik olduğunda kaydetme butonu aktif olur.")
         if st.button("💾 Kadroyu kaydet", type="primary", use_container_width=True,
                      disabled=not pending):
             save_roster(team_name, selected, injured)
@@ -177,9 +179,8 @@ if page == "👥 Kadrom":
             "Oyuncu": [display_name(pid, catalog) for pid in roster_ids],
             "Durum": ["IL" if pid in il_ids else "Kadromda" for pid in roster_ids],
         })
-        st.dataframe(roster_table, hide_index=True, use_container_width=True)
-    st.caption("Not: Ücretsiz Streamlit sunucusunda kadrolar kalıcı değil. "
-               "⚙️ Veri Merkezi > Kadro yedeği üzerinden beş takımını tek dosyada saklayabilirsin.")
+        st.dataframe(roster_table, hide_index=True, use_container_width=True, height=min(600, 85+35*len(roster_table)))
+    st.caption("Önemli: Kadrolar henüz kalıcı bulut veritabanında değil. Veri > Yedekler bölümünden JSON yedeği alabilirsin.")
 
 
 elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
@@ -197,8 +198,8 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
         info = {}
         sort_col = "FPTS_PG"
     selected = players[players["PLAYER_ID"].isin(set(resolved) - set(resolved_il))].copy()
-    st.caption(f"Veri: {source_label} · {len(players)} oyuncu · Son gerçek sezon kaydı: "
-               f"{last_updated(SEASON) or 'Henüz yok'}")
+    st.caption(f"Kaynak: {source_label} · {len(players)} oyuncu · "
+               f"Gerçek maç verisi: {last_updated(SEASON) or 'Henüz yok'}")
     if source_label == "SENTETİK DEMO":
         st.warning("Örnek veri açıktır. Bu sayılar gerçek NBA oyuncularına ait değildir.")
     if missing:
@@ -220,16 +221,22 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
             c2.metric("FG%", f"%{100 * meta['fgm_pg'] / meta['fga_pg']:.1f}" if meta["fga_pg"] else "—")
             c3.metric("FT%", f"%{100 * meta['ftm_pg'] / meta['fta_pg']:.1f}" if meta["fta_pg"] else "—")
             st.markdown("#### Kategori dengesi")
+            st.caption("Pozitif z-score güçlü, negatif z-score gelişime açık kategoriyi gösterir.")
             st.bar_chart(result.set_index("Kategori")["Ortalama z-score"],
                          horizontal=True, height=340)
             show_result = result.copy()
             show_result["Kadro değeri (maç başı toplam)"] = show_result.apply(
                 lambda r: f"%{100*r['Kadro değeri (maç başı toplam)']:.1f}"
                 if r["Kategori"] in ("FG%", "FT%") else f"{r['Kadro değeri (maç başı toplam)']:.2f}", axis=1)
-            st.dataframe(show_result, hide_index=True, use_container_width=True)
+            st.dataframe(show_result, hide_index=True, use_container_width=True,
+                         column_config={"Ortalama z-score": st.column_config.NumberColumn(
+                             "Z-score", format="%.2f")},
+                         height=375)
             st.markdown("#### Punt seçenekleri")
             st.dataframe(category_punt_view(players, resolved, resolved_il).head(4),
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, use_container_width=True,
+                         column_config={"Kalan 8 kategori z toplamı / oyuncu": st.column_config.NumberColumn(
+                             "Kalan 8 kategori z", format="%.2f")})
             st.caption("Kategori z-score kıyası NBA oyuncu havuzuna göredir, Yahoo ligindeki 12 takıma değil. "
                        "Punt puanı rakibi ve kazanma olasılığını henüz içermez.")
         else:
@@ -240,7 +247,8 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
             st.dataframe(ptable.sort_values("FPTS_PG", ascending=False).rename(columns={
                 "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
                 "MIN_PG": "Dakika/maç", "GP": "Beklenen maç",
-                "FPTS_PG": "FPTS/maç"}), hide_index=True, use_container_width=True)
+                "FPTS_PG": "FPTS/maç"}), hide_index=True, use_container_width=True,
+                column_config={"FPTS/maç": st.column_config.NumberColumn("FPTS/maç",format="%.1f")})
             st.caption("Yahoo standart Points katsayıları kullanılır. Maç fikstürü ve aktif slot kısıtları "
                        "henüz dahil edilmedi.")
 
@@ -280,7 +288,12 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
                 "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
                 "MIN_PG": "DK/maç", "GP": "Beklenen maç",
                 "Z_TOTAL": "9-cat z", "FPTS_PG": "FPTS/maç"}),
-                hide_index=True, use_container_width=True, height=570)
+                hide_index=True, use_container_width=True, height=560,
+                column_config={
+                    "9-cat z": st.column_config.NumberColumn("9-cat z", format="%.2f"),
+                    "FPTS/maç": st.column_config.NumberColumn("FPTS/maç", format="%.1f"),
+                    "DK/maç": st.column_config.NumberColumn("DK/maç", format="%.1f"),
+                })
         with fit_tab:
             st.caption("Kadronun dışında kalan tüm oyuncular değerlendirilir. "
                        "İlk 35 veya 185 sınırı yok; oyuncular aşağıdaki öneri sırasına göre dizilir.")
@@ -304,7 +317,11 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
                     "Sıra": "Genel sıra", "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
                     "MIN_PG": "DK/maç", "GP": "Beklenen maç",
                     "TAKIMA_UYUM": "Takıma uyum", "Z_TOTAL": "9-cat z"}),
-                    hide_index=True, use_container_width=True, height=570)
+                    hide_index=True, use_container_width=True, height=560,
+                    column_config={
+                        "Takıma uyum": st.column_config.NumberColumn("Takıma uyum", format="%.2f"),
+                        "9-cat z": st.column_config.NumberColumn("9-cat z", format="%.2f"),
+                    })
             else:
                 candidates = ranked.loc[~ranked["PLAYER_ID"].isin(resolved)].copy()
                 candidates.insert(0, "Öneri sırası", range(1, len(candidates) + 1))
@@ -318,7 +335,8 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
                     "Sıra": "Genel sıra", "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
                     "MIN_PG": "DK/maç", "GP": "Beklenen maç",
                     "FPTS_PG": "FPTS/maç"}),
-                    hide_index=True, use_container_width=True, height=570)
+                    hide_index=True, use_container_width=True, height=560,
+                    column_config={"FPTS/maç": st.column_config.NumberColumn("FPTS/maç", format="%.1f")})
 
 
 elif page == "⚙️ Veri Merkezi":
