@@ -14,6 +14,7 @@ import streamlit as st
 from analysis import (CATEGORIES, POINTS_FIELDS, category_punt_view, category_team_fit,
                       category_scores, normalize, points_scores, roster_analysis)
 from data_sources import fetch_nba_totals, last_updated, load_cache, save_csv
+from projection_engine import PROJECTION_SEASON, SOURCE_URL, blend_with_actual, fetch_fantasypros, load_projection, save_projection
 from roster_catalog import bundled_catalog, display_name, find_catalog_player, resolve_roster_ids
 from storage import (TEAMS, YAHOO_DEFAULT_POINTS, get_roster, get_weights,
                      init, reset_weights, save_roster, save_weights)
@@ -22,10 +23,10 @@ st.set_page_config(page_title="NBA Fantasy | 5 Takım Analizi", page_icon="🏀"
 init()
 
 st.title("🏀 NBA Fantasy — Kadro Analizi")
-st.caption("5 takım, 2 farklı lig formatı · Yahoo API olmadan · MVP v0.3")
+st.caption("5 takım · 2026–27 projeksiyon + gerçek maç verisi · MVP v0.4")
 
-season = st.sidebar.selectbox("Sezon", ["2025-26", "2026-27"], index=0,
-    help="2026-27 normal sezonu henüz başlamadıysa 2025-26 referans alınır.")
+season = st.sidebar.selectbox("Analiz sezonu", ["2026-27", "2025-26"], index=0,
+    help="Yeni sezonda önce projeksiyon, maçlar oynandıkça gerçek istatistikler.")
 team_names = [t[0] for t in TEAMS]
 team_name = st.sidebar.selectbox("Fantasy takımım", team_names)
 team_meta = next(t for t in TEAMS if t[0] == team_name)
@@ -148,6 +149,35 @@ with st.container(border=True):
     st.caption("⚠️ Streamlit Cloud üzerindeki yerel kayıt sistemi geçicidir: "
                "sunucu yeniden başladığında kadrolar sıfırlanabilir. Sol menüden JSON yedeğini indir. Kalıcı veritabanı sonraki geliştirmedir.")
 
+if season == PROJECTION_SEASON:
+    with st.container(border=True):
+        st.subheader("🔮 2026–27 Sezon Projeksiyonları")
+        st.caption("Ana kaynak: FantasyPros uzman konsensüsü. NBA'in ilk maçlarını beklemeden "
+                   "oyuncu tahminleriyle analiz yapabilirsin. Veri kaynağına erişim "
+                   "olmazsa CSV yükleme kullanılabilir.")
+        st.markdown(f"[FantasyPros tahminlerini gör]({SOURCE_URL})")
+        colp1, colp2 = st.columns(2)
+        with colp1:
+            if st.button("🔄 Projeksiyonları getir / güncelle", use_container_width=True):
+                try:
+                    with st.spinner("Projeksiyon tablosu okunuyor..."):
+                        loaded = fetch_fantasypros()
+                    st.success(f"{len(loaded)} oyuncunun projeksiyonu alındı.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Projeksiyon alınamadı: {exc}")
+        with colp2:
+            upload = st.file_uploader("Projeksiyon CSV yükle (alternatif)", type=["csv"], key="projection_upload")
+            if upload is not None and st.button("Projeksiyon CSV'sini kullan", key="use_projection_csv"):
+                try:
+                    loaded = save_projection(pd.read_csv(upload))
+                    st.success(f"{len(loaded)} oyuncunun projeksiyonu kaydedildi.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Projeksiyon CSV'si geçersiz: {exc}")
+        st.caption("FG%/FT% notu: FantasyPros'un ücretsiz tablosunda şut denemeleri yok. "
+                   "FGA/FTA için geçici tahmini hacim kullanılır; bu değerler kaynak tahmini değildir.")
+
 with st.expander("📥 Oyuncu verisi · NBA'den yenile / CSV yükle", expanded=False):
     left, right = st.columns(2)
     with left:
@@ -181,9 +211,24 @@ with st.expander("📥 Oyuncu verisi · NBA'den yenile / CSV yükle", expanded=F
         st.rerun()
 
 try:
+    basis = "Gerçek NBA sezon toplamları"
     if "demo_data" in st.session_state:
         raw = normalize(st.session_state["demo_data"])
+        basis = "SENTETİK DEMO"
         st.warning("DEMO MODU — Bu oyuncular ve istatistikler tamamen yapaydır. Gerçek NBA analizi değildir.")
+    elif season == PROJECTION_SEASON:
+        projected = load_projection()
+        if projected is None:
+            try:
+                with st.spinner("2026–27 projeksiyonları ilk kez alınıyor..."):
+                    projected = fetch_fantasypros(timeout=12)
+            except Exception as exc:
+                st.warning(f"Projeksiyon kaynağına ulaşılamadı: {exc}. "
+                           "Yukarıdaki CSV projeksiyon yüklemesini kullanabilirsin.")
+        actual = load_cache(PROJECTION_SEASON)
+        raw = blend_with_actual(projected, actual) if projected is not None else actual
+        basis = ("2026–27 FantasyPros projeksiyon + gerçek NBA verisi" if actual is not None
+                 else "2026–27 FantasyPros projeksiyon") if projected is not None else "Gerçek 2026–27 maçları"
     else:
         raw = load_cache(season)
 except Exception as exc:
@@ -191,15 +236,24 @@ except Exception as exc:
     st.error(f"Sezon verisi okunamadı: {exc}")
 
 if raw is None:
-    st.info("Kadronu yukarıdaki 👥 Kadrom bölümünden hemen seçip kaydedebilirsin. İstatistikli analiz ve sıralamalar için NBA sezon verisini çek veya CSV yükle.")
+    st.info("Kadronu üstteki 👥 Kadrom bölümünden hemen girebilirsin. "
+            "Analiz için projeksiyonları yükle. Gerçek maçları beklemene gerek yok.")
     sample = Path(__file__).resolve().parent / "sample_data" / "season_totals_template.csv"
     st.download_button("Boş CSV şablonunu indir", data=sample.read_bytes(),
                        file_name="nba_season_totals_template.csv", mime="text/csv")
     st.stop()
 
-st.caption(f"Kaynak: {'SENTETİK DEMO' if 'demo_data' in st.session_state else 'NBA API veya içe aktarılan CSV'} · "
-           f"Sezon: {season} · Son kayıt: {last_updated(season) or 'Demo / bilinmiyor'} · "
-           f"{len(raw)} oyuncu")
+st.caption(f"Kaynak: {basis} · Sezon: {season} · {len(raw)} oyuncu · "
+           f"Gerçek verilerin son kaydı: {last_updated(season) or 'Yok'}")
+if season == PROJECTION_SEASON and "demo_data" not in st.session_state:
+    if "ACTUAL_WEIGHT" in raw.columns:
+        matches = int((pd.to_numeric(raw["GP_ACTUAL"], errors="coerce").fillna(0) > 0).sum())
+        st.info(f"Projeksiyon / gerçekleşen: {matches} oyuncuda gerçek maç var. "
+                "5 maçta %20, 10 maçta %40, 20 maçta %65, 30+ maçta %85 gerçek veri ağırlığı.")
+    if "FGA_PROXY" in raw.columns and raw["FGA_PROXY"].astype(str).str.lower().eq("true").any():
+        st.warning("FG%/FT% için şut denemelerinin bir kısmı tahmini hacim. "
+                   "Yüzdelerin gerçek kategori etkisini şimdilik yaklaşık hesaplıyoruz.")
+
 
 if team_type == "CAT":
     players, reference_info = category_scores(raw)
