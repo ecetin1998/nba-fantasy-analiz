@@ -15,7 +15,7 @@ from projection_engine import (SOURCE_URL, blend_with_actual, fetch_fantasypros,
                                load_projection, projection_cache_age_hours, save_projection)
 from roster_catalog import bundled_catalog, display_name, find_catalog_player, resolve_roster_ids
 from storage import TEAMS, get_roster, get_weights, init, reset_weights, save_roster, save_weights
-from ui_theme import apply_style, hero, section_kicker, footer
+from ui_theme import apply_style, hero, section_kicker, section_header, team_overview, roster_cards, ranking_podium, footer
 
 
 SEASON = "2026-27"  # This app is for 2026–27 only. Previous-season selector removed.
@@ -30,29 +30,13 @@ hero()
 
 names = [team[0] for team in TEAMS]
 team_names_map = {name: (league_id, league_format) for name, league_id, league_format in TEAMS}
-col_team, col_meta = st.columns([1.65, 1], vertical_alignment="bottom")
-with col_team:
-    team_name = st.selectbox("Fantasy takımın", names, key="active_team")
-with col_meta:
-    league_id, fmt = team_names_map[team_name]
-    st.markdown(
-        '<div class="nba-inline-meta"><span class="nba-tag">'
-        + ("9 KATEGORİ · H2H" if fmt == "CAT" else "POINTS · H2H")
-        + '</span><span class="nba-muted">Lig #' + league_id + "</span></div>",
-        unsafe_allow_html=True,
-    )
-
+team_name = st.selectbox("FANTASY TAKIMINI DEĞİŞTİR", names, key="active_team")
+league_id, fmt = team_names_map[team_name]
 roster_ids, il_ids = get_roster(team_name)
-section_kicker("TAKIM ÖZETİ")
 proj_exists = (ROOT / "data" / "projection_2026-27.csv").exists()
-actual_exists = (ROOT / "data" / "nba_totals_2026-27.csv").exists()
-source_health = "Gerçek + Tahmin" if actual_exists and proj_exists else (
-    "Projeksiyon" if proj_exists else "Hazır değil"
-)
-stats_cols = st.columns(3)
-stats_cols[0].metric("Kadro", f"{len(roster_ids)} / 15")
-stats_cols[1].metric("IL", f"{len(il_ids)} / 2")
-stats_cols[2].metric("Veri", source_health)
+# Data status reflects projection cache presence only; actual state is shown on Analysis.
+source_health = "Hazır" if proj_exists else "Bekliyor"
+team_overview(team_name, fmt, league_id, len(roster_ids), len(il_ids), source_health)
 
 # Short visible navigation labels are readable on narrow phones.
 NAV = {
@@ -128,8 +112,7 @@ def no_data_message(error: str | None):
 
 
 if page == "👥 Kadrom":
-    st.subheader("Kadrom")
-    st.caption("Oyuncularını ara, ekle ve kaydet. Her fantasy takımının kadrosu ayrı tutulur.")
+    section_header("Kadrom", "Oyuncularını arayarak ekle. Her takımın kadrosu ayrı saklanır.")
     catalog = player_directory()
     roster_key = f"roster_input_{team_name}"
     il_key = f"il_input_{team_name}"
@@ -182,14 +165,9 @@ if page == "👥 Kadrom":
         if st.session_state.pop(f"saved_{team_name}", False):
             st.success("Kadron kaydedildi.")
 
-    if roster_ids:
-        st.markdown('<div class="nba-section">KAYITLI OYUNCULAR</div>', unsafe_allow_html=True)
-        roster_table = pd.DataFrame({
-            "Oyuncu": [display_name(pid, catalog) for pid in roster_ids],
-            "Durum": ["IL" if pid in il_ids else "Kadromda" for pid in roster_ids],
-        })
-        st.dataframe(roster_table, hide_index=True, use_container_width=True, height=min(600, 85+35*len(roster_table)))
-    st.caption("Önemli: Kadrolar henüz kalıcı bulut veritabanında değil. Veri > Yedekler bölümünden JSON yedeği alabilirsin.")
+    section_kicker("KAYITLI KADRO")
+    roster_cards(roster_ids, il_ids, catalog)
+    st.caption("Kadrolar henüz kalıcı bulut veritabanında değil. Veri bölümünden JSON yedeğini indirebilirsin.")
 
 
 elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
@@ -218,7 +196,7 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
         st.caption("FG% ve FT% hacimleri kısmen yaklaşık tahmindir. Ayrıntılı FGA/FTA geldiğinde netleşir.")
 
     if page == "📊 Kadro Analizi":
-        st.subheader(f"{team_name} · Kadro analizi")
+        section_header("Kadro Analizi", f"{team_name} için beklenen üretim ve kategori dengesi")
         if selected.empty:
             st.info("Henüz bu kadroya eklenmiş ve istatistikle eşleşen oyuncu yok. 👥 Kadrom bölümünden ekleyebilirsin.")
             st.stop()
@@ -278,13 +256,18 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
         st.caption("Rol etiketleri beklenen dakikadan hesaplanır; kesin ilk beş tahmini değildir.")
 
     else:
-        st.subheader("Oyuncu Radarı")
-        st.caption("2026–27 tüm oyuncu projeksiyonları · 1. sıradan son oyuncuya kadar. "
-                   "Yahoo'da boşta olma durumu bilinmiyor.")
+        section_header("Oyuncu Radarı", "2026–27 projeksiyonları ve takımına uygun transfer adayları")
+        st.caption("Tüm oyuncular 1. sıradan itibaren listelenir. Yahoo waiver durumu bilinmiyor.")
         ranked = players.sort_values(sort_col, ascending=False).copy()
         ranked.insert(0, "Sıra", range(1, len(ranked) + 1))
         ranking_tab, fit_tab = st.tabs(["🏆 Tüm oyuncular", "🎯 Kadroma uygun adaylar"])
         with ranking_tab:
+            podium_rows = [
+                (int(row["Sıra"]), str(row["PLAYER_NAME"]),
+                 str(row["TEAM_ABBREVIATION"]), float(row[sort_col]))
+                for _, row in ranked.head(3).iterrows()
+            ]
+            ranking_podium(podium_rows, "9-cat z" if fmt == "CAT" else "FPTS/maç")
             st.caption(f"Projeksiyon havuzu: {len(ranked)} oyuncu · "
                        f"{'9-cat z-score' if fmt == 'CAT' else 'Yahoo Points'} bazlı genel sıralama.")
             query = st.text_input("Oyuncu ara", key=f"ranking_search_{team_name}",
@@ -349,7 +332,7 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
 
 
 elif page == "⚙️ Veri Merkezi":
-    st.subheader("Veri Merkezi")
+    section_header("Veri Merkezi", "Güncelleme, yedekleme ve kaynak ayarları")
     st.caption("Günlük kullanımda bu bölümü açman gerekmiyor. Kaynaklar, güncellemeler ve yedekler burada.")
 
     proj_age = projection_cache_age_hours()
