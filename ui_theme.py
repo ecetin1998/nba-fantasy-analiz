@@ -105,6 +105,118 @@ h3 {font-size:1.12rem !important;font-weight:720 !important;}
   [data-testid="stMetricLabel"]{font-size:.65rem;}
   [data-testid="stSegmentedControl"] button{font-size:.72rem;padding:6px;}
 }
+
+/* UI V3: unmistakably different editorial + court-inspired interface */
+.stApp {
+  background: radial-gradient(ellipse 760px 560px at 95% -150px,rgba(134,79,255,.18),transparent 68%),
+              radial-gradient(ellipse 600px 500px at -22% 42%,rgba(34,200,164,.075),transparent 60%),
+              #080e19 !important;
+}
+.block-container {max-width:1190px !important;}
+.nba-hero {
+  min-height:232px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 310px;
+  align-items:center;
+  gap:24px;
+  background:linear-gradient(112deg,#15233d 0%,#131b34 56%,#171d37 100%) !important;
+  border:1px solid rgba(138,162,224,.35);
+  box-shadow:0 20px 55px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.045);
+  padding:28px 32px;
+  position:relative;overflow:hidden;
+}
+.nba-hero:before {content:"";position:absolute;inset:0 0 auto;height:3px;
+ background:linear-gradient(90deg,#3be2b3 0%,#7c86ff 65%,#c886f4 100%);}
+.nba-brandcopy {position:relative;z-index:1;}
+.nba-heading {font-size:clamp(2.35rem,4.6vw,3.55rem) !important;line-height:1.02 !important;margin:13px 0 11px !important;}
+.nba-heading span {color:#6ce9cb !important;}
+.nba-desc {font-size:.91rem !important;max-width:440px;}
+.nba-build {background:#2a2550;border-color:#6564c2;color:#c8c6ff;letter-spacing:.055em;}
+.nba-court {
+  width:288px;height:176px;position:relative;overflow:hidden;
+  border:1px solid rgba(118,165,221,.38);
+  background:linear-gradient(135deg,rgba(36,69,103,.72),rgba(13,33,63,.18));
+  border-radius:13px;box-shadow:inset 0 0 35px rgba(0,0,0,.18);
+  transform:rotate(-5deg);
+}
+.nba-court:after{content:"";position:absolute;inset:15px 15px;
+ border:1.5px solid rgba(157,208,224,.40);border-radius:2px;}
+.nba-half-line{position:absolute;top:15px;bottom:15px;left:50%;width:1.5px;background:rgba(157,208,224,.33);}
+.nba-center-circle{position:absolute;width:62px;height:62px;border-radius:50%;border:1.5px solid rgba(157,208,224,.35);left:50%;top:50%;transform:translate(-50%,-50%);}
+.nba-paint-left,.nba-paint-right{position:absolute;width:64px;height:78px;border:1.5px solid rgba(157,208,224,.33);top:50%;transform:translateY(-50%);}
+.nba-paint-left{left:15px;border-left:0}.nba-paint-right{right:15px;border-right:0}
+.nba-court-ball {position:absolute;left:54%;top:39%;height:34px;width:34px;display:flex;
+ align-items:center;justify-content:center;font-size:27px;transform:rotate(5deg);
+ filter:drop-shadow(0 5px 8px rgba(0,0,0,.40));z-index:3;}
+.nba-court-pill {position:absolute;right:25px;bottom:18px;color:#b6ffe9;font-size:11px;
+ font-weight:800;letter-spacing:.1em;background:#122a34a8;padding:6px 10px;
+ border:1px solid #56bdad55;border-radius:10px;z-index:4;transform:rotate(5deg);}
+.nba-team-overview{border:1px solid #31415b;border-radius:17px;
+ background:linear-gradient(108deg,#142139 0%,#171d31 100%);
+ padding:18px 20px;margin:10px 0 20px;display:grid;grid-template-columns:2fr repeat(3,minmax(0,1fr));gap:18px;align-items:center;}
+.nba-summary-team{min-width:0}.nba-overline{color:#839fbf;font-size:.66rem;letter-spacing:.13em;font-weight:800;display:block;margin-bottom:6px;}
+.nba-summary-title{font-size:1.18rem;font-weight:800;color:#f4f9ff;overflow-wrap:anywhere;}
+.nba-summary-info{color:#8fdcc8;font-size:.77rem;margin-top:6px;}
+.nba-summary-stat{border-left:1px solid #39485e;padding-left:17px;}
+.nba-summary-stat strong{display:block;color:#fafbff;font-size:1.36rem;line-height:1.28;white-space:nowrap;}
+.nba-summary-stat em{display:block;font-style:normal;font-size:.70rem;color:#9caec5;margin-top:4px;}
+.nba-summary-track{height:5px;background:#26344c;border-radius:999px;margin-top:9px;overflow:hidden;}
+.nba-summary-fill{display:block;height:100%;background:linear-gradient(90deg,#21bdab,#69e7cd);border-radius:999px;}
+.nba-empty-state{background:linear-gradient(118deg,#121e32,#132b32);
+ border:1px dashed #3b7776;border-radius:16px;padding:28px 22px;text-align:center;}
+.nba-empty-state .symbol{font-size:2.0rem;line-height:1.3;margin-bottom:7px;}
+.nba-empty-state h3{margin:6px 0 4px;font-size:1.2rem;}
+.nba-empty-state p{color:#a6c1ca;margin:0;font-size:.84rem;}
+.nba-player-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:13px 0 12px;}
+.nba-player-item{display:flex;align-items:center;gap:12px;background:#111e2f;
+ border:1px solid #2b4056;border-radius:12px;padding:12px 13px;min-width:0;}
+.nba-player-index{height:34px;min-width:34px;display:flex;align-items:center;justify-content:center;
+ border-radius:10px;background:#1a3540;color:#6ff1d0;font-weight:800;font-size:.73rem;}
+.nba-player-text{min-width:0;flex:1}
+.nba-player-name{color:#eef6ff;font-weight:750;font-size:.86rem;line-height:1.25;overflow-wrap:anywhere;}
+.nba-player-sub{color:#839bb9;font-size:.67rem;margin-top:3px;}
+.nba-player-flag{color:#ffcf93;border:1px solid #665239;background:#392e20;
+ border-radius:8px;padding:4px 8px;font-size:.66rem;font-weight:800;}
+.nba-section-header{display:flex;align-items:center;justify-content:space-between;gap:14px;
+ padding-bottom:12px;border-bottom:1px solid #273751;margin:20px 0 15px;}
+.nba-section-header h2{font-weight:820;color:#f8fbff;font-size:1.4rem;margin:0;}
+.nba-section-header p{font-size:.79rem;color:#94abc7;margin:6px 0 0;}
+.nba-ranking-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 20px;}
+.nba-podium-item{background:linear-gradient(155deg,#17243e,#101d31);border:1px solid #32435d;
+ padding:15px;border-radius:13px;min-width:0;}
+.nba-podium-index{font-size:.73rem;font-weight:900;letter-spacing:.1em;color:#84e6cf;}
+.nba-podium-name{font-weight:780;color:#f3f8ff;font-size:1.0rem;margin:8px 0 6px;overflow-wrap:anywhere;}
+.nba-podium-meta{font-size:.72rem;color:#91a7c0;}
+.nba-podium-score{font-size:1.44rem;font-weight:820;color:#fff;margin-top:12px;letter-spacing:-.03em;}
+.nba-podium-score small{font-size:.63rem;font-weight:580;color:#7fcdb7;margin-left:5px;}
+.nba-podium-item:first-child{border-color:#32bfab;background:linear-gradient(155deg,#1c3442,#113039);}
+.nba-podium-item:nth-child(2){border-color:#6661a9;}
+.nba-podium-item:nth-child(3){border-color:#415b82;}
+[data-testid="stSegmentedControl"]>div{background:#121d32 !important;border:1px solid #3a4565 !important;
+ box-shadow:0 8px 24px rgba(0,0,0,.13);}
+[data-testid="stSegmentedControl"] button[aria-checked="true"],
+[data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:#31596a !important;color:white !important;}
+@media(max-width:780px) {
+ .nba-hero{grid-template-columns:1fr;min-height:0;padding:20px 19px;}
+ .nba-court{display:none;}
+ .nba-heading{font-size:2rem !important;}
+ .nba-team-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:13px 14px;}
+ .nba-summary-team{grid-column:1/-1;padding-bottom:9px;border-bottom:1px solid #2c3c56;}
+ .nba-summary-stat{padding-left:0;border:0;}
+ .nba-summary-stat strong{font-size:1.14rem;}
+ .nba-player-grid{grid-template-columns:1fr;}
+ .nba-ranking-podium{gap:6px;}
+ .nba-podium-item{padding:10px 9px;}
+ .nba-podium-name{font-size:.80rem;min-height:2.4em;}
+ .nba-podium-score{font-size:1.13rem;}
+}
+@media(max-width:400px) {
+ .nba-heading{font-size:1.76rem !important;}
+ .nba-summary-stat strong{font-size:1.0rem;}
+ .nba-summary-stat em{font-size:.62rem;}
+ .nba-podium-score small{display:block;margin:0;}
+}
+
 </style>
 """
 
@@ -117,15 +229,95 @@ def hero():
     st.markdown(
         """
 <section class="nba-hero">
-  <div class="nba-brandline">
-    <span class="nba-brandmark">🏀</span>
-    <span class="nba-kicker">2026–27 · FANTASY BASKETBOL</span>
-    <span class="nba-build">● UI V2.1 · 19 EKİM</span>
+  <div class="nba-brandcopy">
+    <div class="nba-brandline">
+      <span class="nba-brandmark">🏀</span>
+      <span class="nba-kicker">YAHOO FANTASY · 2026–27</span>
+      <span class="nba-build">UI V3 · YENİ TASARIM</span>
+    </div>
+    <div class="nba-heading">OYUNUNU <span>VERİYLE</span><br>KAZAN.</div>
+    <p class="nba-desc">Beş kadronu tek yerde yönet. Sezon projeksiyonlarını incele,
+    doğru oyuncuyu doğru zamanda keşfet.</p>
   </div>
-  <div class="nba-heading">NBA FANTASY <span>SCOUT</span></div>
-  <p class="nba-desc">Takımlarını yönet, oyuncuları karşılaştır, projeksiyonlarla avantaj yakala.</p>
+  <div class="nba-court" aria-hidden="true">
+    <span class="nba-half-line"></span><span class="nba-center-circle"></span>
+    <span class="nba-paint-left"></span><span class="nba-paint-right"></span>
+    <span class="nba-court-ball">🏀</span>
+    <span class="nba-court-pill">2026 / 27</span>
+  </div>
 </section>
 """, unsafe_allow_html=True)
+
+
+def section_header(title: str, subtitle: str):
+    from html import escape
+    st.markdown(
+        '<div class="nba-section-header"><div><h2>' + escape(title)
+        + '</h2><p>' + escape(subtitle) + '</p></div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def team_overview(name: str, fmt: str, league_id: str, roster_count: int, il_count: int,
+                  data_label: str):
+    from html import escape
+    fmt_label = "H2H · 9-CAT" if fmt == "CAT" else "H2H · POINTS"
+    fill = max(0, min(100, roster_count / 15 * 100))
+    html = (
+        '<section class="nba-team-overview">'
+        '<div class="nba-summary-team"><span class="nba-overline">AKTİF FANTASY TAKIMIN</span>'
+        '<div class="nba-summary-title">' + escape(name) + '</div>'
+        '<div class="nba-summary-info">' + fmt_label + ' · Lig ' + escape(str(league_id)) + '</div></div>'
+        '<div class="nba-summary-stat"><strong>' + str(roster_count) + '/15</strong>'
+        '<em>Oyuncu</em><div class="nba-summary-track"><span class="nba-summary-fill" style="width:'
+        + f'{fill:.1f}%' + '"></span></div></div>'
+        '<div class="nba-summary-stat"><strong>' + str(il_count) + '/2</strong><em>IL</em></div>'
+        '<div class="nba-summary-stat"><strong>' + escape(data_label)
+        + '</strong><em>Veri durumu</em></div>'
+        '</section>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def roster_cards(roster: list[str], inactive: list[str], catalog: dict[str, str]):
+    from html import escape
+    if not roster:
+        st.markdown(
+            '<div class="nba-empty-state"><div class="symbol">🏀</div>'
+            '<h3>Henüz kadro oluşturmadın</h3>'
+            '<p>Yukarıdan oyuncu seçerek ilk takımını oluştur.</p></div>',
+            unsafe_allow_html=True,
+        )
+        return
+    from roster_catalog import display_name
+    items = []
+    for i, pid in enumerate(roster, start=1):
+        safe_name = escape(display_name(pid, catalog))
+        is_il = pid in set(inactive)
+        items.append(
+            '<div class="nba-player-item"><div class="nba-player-index">'
+            + f'{i:02}' + '</div><div class="nba-player-text">'
+            + '<div class="nba-player-name">' + safe_name + '</div>'
+            + '<div class="nba-player-sub">' + ("Sakat listesi" if is_il else "Fantasy kadrom")
+            + '</div></div>' + ('<span class="nba-player-flag">IL</span>' if is_il else '') + '</div>'
+        )
+    st.markdown('<div class="nba-player-grid">' + ''.join(items) + '</div>', unsafe_allow_html=True)
+
+
+def ranking_podium(records: list[tuple[int, str, str, float]], score_label: str):
+    from html import escape
+    if not records:
+        return
+    cards = []
+    for rank, name, club, score in records[:3]:
+        cards.append(
+            '<div class="nba-podium-item"><div class="nba-podium-index">#'
+            + str(rank) + ' · TOP 3</div><div class="nba-podium-name">'
+            + escape(str(name)) + '</div><div class="nba-podium-meta">'
+            + escape(str(club)) + '</div><div class="nba-podium-score">'
+            + f'{float(score):.1f}' + '<small>' + escape(score_label) + '</small></div></div>'
+        )
+    st.markdown('<div class="nba-ranking-podium">' + ''.join(cards) + '</div>', unsafe_allow_html=True)
 
 
 def section_kicker(label: str):
