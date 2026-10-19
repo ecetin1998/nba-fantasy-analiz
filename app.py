@@ -326,43 +326,63 @@ elif page in ("📊 Kadro Analizi", "🔎 Oyuncu Radarı"):
 
     else:
         st.subheader("Oyuncu Radarı")
-        st.caption(f"{'9-cat z-score' if fmt == 'CAT' else 'Yahoo Points'} sıralaması. "
-                   "Yalnızca kadronun dışında kalan oyuncular aday sayılır; Yahoo waiver durumu bilinmez.")
+        st.caption("2026–27 tüm oyuncu projeksiyonları · 1. sıradan son oyuncuya kadar. "
+                   "Yahoo'da boşta olma durumu bilinmiyor.")
         ranked = players.sort_values(sort_col, ascending=False).copy()
         ranked.insert(0, "Sıra", range(1, len(ranked) + 1))
-        ranking_tab, fit_tab = st.tabs(["🏆 Genel sıralama", "🎯 Takımıma uygun"])
+        ranking_tab, fit_tab = st.tabs(["🏆 Tüm oyuncular", "🎯 Kadroma uygun adaylar"])
         with ranking_tab:
+            st.caption(f"Projeksiyon havuzu: {len(ranked)} oyuncu · "
+                       f"{'9-cat z-score' if fmt == 'CAT' else 'Yahoo Points'} bazlı genel sıralama.")
+            query = st.text_input("Oyuncu ara", key=f"ranking_search_{team_name}",
+                                  placeholder="Örn. Tyrese Maxey")
+            ranking_view = ranked[
+                ranked["PLAYER_NAME"].str.contains(query.strip(), case=False, regex=False, na=False)
+            ] if query.strip() else ranked
             cols = ["Sıra", "PLAYER_NAME", "TEAM_ABBREVIATION", "MIN_PG", "GP", sort_col]
-            st.dataframe(ranked[cols].head(120).rename(columns={
+            st.dataframe(ranking_view[cols].rename(columns={
                 "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
                 "MIN_PG": "DK/maç", "GP": "Beklenen maç",
                 "Z_TOTAL": "9-cat z", "FPTS_PG": "FPTS/maç"}),
-                hide_index=True, use_container_width=True)
+                hide_index=True, use_container_width=True, height=570)
         with fit_tab:
+            st.caption("Kadronun dışında kalan tüm oyuncular değerlendirilir. "
+                       "İlk 35 veya 185 sınırı yok; oyuncular aşağıdaki öneri sırasına göre dizilir.")
+            query_candidate = st.text_input("Aday oyuncu ara", key=f"candidate_search_{team_name}",
+                                             placeholder="İsimle filtrele…")
             if fmt == "CAT":
-                ranked_fit, weights = category_team_fit(players, resolved, resolved_il)
-                ranked_fit = ranked_fit.sort_values("Z_TOTAL", ascending=False).copy()
-                ranked_fit["Genel sıra"] = range(1, len(ranked_fit) + 1)
-                candidates = ranked_fit[ranked_fit["Genel sıra"].between(36, 185)
-                                        & ~ranked_fit["PLAYER_ID"].isin(resolved)]
-                candidates = candidates.sort_values("TAKIMA_UYUM", ascending=False)
-                st.caption("36–185 genel sıra arasındaki oyuncular, kadronun zayıf kategorilerine göre sıralanır. "
-                           "Bu gerçek form yükselişi veya boşta olma garantisi değildir.")
-                st.dataframe(candidates[["Genel sıra", "PLAYER_NAME", "TEAM_ABBREVIATION",
-                                        "MIN_PG", "TAKIMA_UYUM", "Z_TOTAL"]].head(50).rename(columns={
-                    "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
-                    "MIN_PG": "Dakika", "TAKIMA_UYUM": "Takıma uyum", "Z_TOTAL": "9-cat z"}),
-                    hide_index=True, use_container_width=True)
+                fit_scores, _ = category_team_fit(players, resolved, resolved_il)
+                general_ranks = ranked[["PLAYER_ID", "Sıra"]]
+                candidates = fit_scores.loc[~fit_scores["PLAYER_ID"].isin(resolved)].copy()
+                candidates = candidates.merge(general_ranks, on="PLAYER_ID", how="left")
+                candidates = candidates.sort_values("TAKIMA_UYUM", ascending=False).reset_index(drop=True)
+                candidates.insert(0, "Öneri sırası", range(1, len(candidates) + 1))
+                if query_candidate.strip():
+                    candidates = candidates[candidates["PLAYER_NAME"].str.contains(
+                        query_candidate.strip(), case=False, regex=False, na=False)]
+                st.caption("Takıma uyum: kadronun zayıf 9-cat kategorilerine ağırlık verilir; "
+                           "sıralama gerçek waiver uygunluğu veya güncel yükseliş garantisi değildir.")
+                st.dataframe(candidates[["Öneri sırası", "Sıra", "PLAYER_NAME",
+                                         "TEAM_ABBREVIATION", "MIN_PG", "GP",
+                                         "TAKIMA_UYUM", "Z_TOTAL"]].rename(columns={
+                    "Sıra": "Genel sıra", "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
+                    "MIN_PG": "DK/maç", "GP": "Beklenen maç",
+                    "TAKIMA_UYUM": "Takıma uyum", "Z_TOTAL": "9-cat z"}),
+                    hide_index=True, use_container_width=True, height=570)
             else:
-                candidates = ranked[ranked["Sıra"].between(36, 185)
-                                    & ~ranked["PLAYER_ID"].isin(resolved)]
-                st.caption("36–185 genel sıra: yıldızlar yerine ikinci kademe oyuncu adayları. "
-                           "Sıralama beklenen maç başı FPTS üretimidir.")
-                st.dataframe(candidates[["Sıra", "PLAYER_NAME", "TEAM_ABBREVIATION",
-                                        "MIN_PG", "FPTS_PG"]].head(50).rename(columns={
-                    "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
-                    "MIN_PG": "Dakika", "FPTS_PG": "FPTS/maç"}),
-                    hide_index=True, use_container_width=True)
+                candidates = ranked.loc[~ranked["PLAYER_ID"].isin(resolved)].copy()
+                candidates.insert(0, "Öneri sırası", range(1, len(candidates) + 1))
+                if query_candidate.strip():
+                    candidates = candidates[candidates["PLAYER_NAME"].str.contains(
+                        query_candidate.strip(), case=False, regex=False, na=False)]
+                st.caption("Points liginde tüm kadro dışı oyuncular beklenen maç başı fantasy "
+                           "puanına göre sıralanır; Yahoo waiver sahipliği bilinmez.")
+                st.dataframe(candidates[["Öneri sırası", "Sıra", "PLAYER_NAME",
+                                         "TEAM_ABBREVIATION", "MIN_PG", "GP", "FPTS_PG"]].rename(columns={
+                    "Sıra": "Genel sıra", "PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA",
+                    "MIN_PG": "DK/maç", "GP": "Beklenen maç",
+                    "FPTS_PG": "FPTS/maç"}),
+                    hide_index=True, use_container_width=True, height=570)
 
 
 elif page == "⚙️ Veri Merkezi":
