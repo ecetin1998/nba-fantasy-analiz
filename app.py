@@ -15,6 +15,7 @@ from projection_engine import (SOURCE_URL, blend_with_actual, fetch_fantasypros,
                                load_projection, projection_cache_age_hours, save_projection)
 from roster_catalog import bundled_catalog, display_name, find_catalog_player, resolve_roster_ids
 from storage import TEAMS, get_roster, get_weights, init, reset_weights, save_roster, save_weights
+from ui_theme import apply_style, hero, section_kicker, footer
 
 
 SEASON = "2026-27"  # This app is for 2026–27 only. Previous-season selector removed.
@@ -24,113 +25,48 @@ st.set_page_config(page_title="NBA Fantasy Scout · 2026–27", page_icon="🏀"
                    layout="wide", initial_sidebar_state="collapsed")
 init()
 
-st.markdown("""
-<style>
-:root {color-scheme: dark;}
-.stApp {
-  background:
-    radial-gradient(ellipse 780px 460px at 85% -220px, rgba(31, 183, 151, .15), transparent 80%),
-    linear-gradient(165deg, #0a1425 0%, #080f1b 100%);
-  color: #eaf2fc;
-}
-.block-container {
-  max-width: 1160px !important;
-  padding: 1.5rem 2.2rem 4rem !important;
-}
-header[data-testid="stHeader"] {background: transparent;}
-div[data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
-h1,h2,h3,p {letter-spacing: -.012em;}
-h2 {font-size: 1.40rem !important; font-weight: 730 !important;}
-h3 {font-size: 1.08rem !important; font-weight: 660 !important;}
-[data-testid="stVerticalBlockBorderWrapper"] > div {
-  border-color: rgba(122,151,194,.20) !important;
-  border-radius: 17px !important;
-}
-[data-testid="stMetric"] {
-  border: 1px solid #27364d;
-  padding: 17px 18px;
-  border-radius: 16px;
-  background: linear-gradient(140deg, #15243a, #101c2c);
-}
-[data-testid="stMetricLabel"] {color: #a6b9d1;}
-[data-testid="stMetricValue"] {color: #f3f7fd; font-weight: 700;}
-[data-testid="stDataFrame"] {border: 1px solid #27364d; border-radius: 12px; overflow: hidden;}
-.stButton>button[kind="primary"], .stDownloadButton>button[kind="primary"] {
-  background: #21b98f !important; color: #071923 !important;
-  border: 0 !important; font-weight: 750 !important;
-}
-.stButton>button, .stDownloadButton>button {
-  border-radius: 11px !important;
-  min-height: 44px;
-}
-[data-baseweb="select"] > div, [data-baseweb="input"] > div {border-radius: 11px !important;}
-[data-testid="stAlert"] {border-radius: 13px; font-size: .94rem;}
-[data-testid="stExpander"] {border-color: #27364d; border-radius: 13px;}
-[data-testid="stSegmentedControl"] {padding-bottom: .3rem;}
-.nba-hero {
-  background: linear-gradient(105deg,#152942 5%,#113b42 95%);
-  border:1px solid rgba(78,181,173,.32);border-radius:20px;
-  padding:24px 28px 22px; margin: 0 0 24px;
-  position:relative;overflow:hidden;
-}
-.nba-kicker {font-size:.72rem;color:#7fead2;font-weight:800;letter-spacing:.16em;}
-.nba-heading {font-size:clamp(1.6rem,3.8vw,2.65rem);
-  font-weight:850;line-height:1.14;color:#fff;margin:9px 0;}
-.nba-heading span {color:#66e6c5;}
-.nba-desc {color:#b7cbda;font-size:.92rem;max-width:660px;margin:0;}
-.nba-section {font-size:.78rem;color:#95adca;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;margin:13px 0 12px;}
-.nba-badge {display:inline-block;background:rgba(46,191,147,.12);
-  border:1px solid rgba(46,191,147,.35);color:#8becce;
-  font-size:.72rem;font-weight:800;border-radius:100px;padding:5px 10px;}
-.nba-note {color:#9baec7;font-size:.82rem;line-height:1.6;}
-.nba-divider {height:1px;background:#24334b;margin:20px 0;}
-@media(max-width: 700px) {
-  .block-container {padding: .65rem 1rem 4rem !important;}
-  .nba-hero {padding:19px 17px;margin-bottom:17px;border-radius:16px;}
-  .nba-heading {font-size:1.72rem;}
-  [data-testid="stMetric"] {padding:11px 12px;}
-  [data-testid="stMetricValue"] {font-size:1.3rem !important;}
-  h2 {font-size:1.22rem !important;}
-  [data-testid="column"] {min-width:0 !important;}
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<section class="nba-hero">
-  <div class="nba-kicker">🏀 &nbsp; 2026–27 SEZONU &nbsp; / &nbsp; FANTASY ANALİZ</div>
-  <div class="nba-heading">NBA FANTASY <span>SCOUT</span></div>
-  <p class="nba-desc">Beş takım. İki lig formatı. Kadrona özel analizler ve sezon projeksiyonları.</p>
-</section>
-""", unsafe_allow_html=True)
+apply_style()
+hero()
 
 names = [team[0] for team in TEAMS]
+team_names_map = {name: (league_id, league_format) for name, league_id, league_format in TEAMS}
 col_team, col_meta = st.columns([1.65, 1], vertical_alignment="bottom")
 with col_team:
-    team_name = st.selectbox("TAKIMINI SEÇ", names, key="active_team")
+    team_name = st.selectbox("Fantasy takımın", names, key="active_team")
 with col_meta:
-    _, league_id, fmt = next(item for item in TEAMS if item[0] == team_name)
+    league_id, fmt = team_names_map[team_name]
     st.markdown(
-        '<div style="padding-bottom:13px;">'
-        '<span class="nba-badge">' + ("H2H · 9 KATEGORİ" if fmt == "CAT" else "H2H · POINTS") + '</span>'
-        '<span style="font-size:.8rem;color:#aebdd0;margin-left:10px;">Lig ' + league_id + '</span>'
-        '</div>', unsafe_allow_html=True)
+        '<div class="nba-inline-meta"><span class="nba-tag">'
+        + ("9 KATEGORİ · H2H" if fmt == "CAT" else "POINTS · H2H")
+        + '</span><span class="nba-muted">Lig #' + league_id + "</span></div>",
+        unsafe_allow_html=True,
+    )
 
 roster_ids, il_ids = get_roster(team_name)
-st.markdown('<div class="nba-section">TAKIM GÖRÜNÜMÜ</div>', unsafe_allow_html=True)
-cols = st.columns(3)
-cols[0].metric("Kadrodaki oyuncu", f"{len(roster_ids)} / 15")
-cols[1].metric("IL oyuncusu", f"{len(il_ids)} / 2")
-cols[2].metric("Sezon", "2026–27")
+section_kicker("TAKIM ÖZETİ")
+proj_exists = (ROOT / "data" / "projection_2026-27.csv").exists()
+actual_exists = (ROOT / "data" / "nba_totals_2026-27.csv").exists()
+source_health = "Gerçek + Tahmin" if actual_exists and proj_exists else (
+    "Projeksiyon" if proj_exists else "Hazır değil"
+)
+stats_cols = st.columns(3)
+stats_cols[0].metric("Kadro", f"{len(roster_ids)} / 15")
+stats_cols[1].metric("IL", f"{len(il_ids)} / 2")
+stats_cols[2].metric("Veri", source_health)
 
-page = st.segmented_control(
-    "Bölüm",
-    ["👥 Kadrom", "📊 Kadro Analizi", "🔎 Oyuncu Radarı", "⚙️ Veri Merkezi"],
-    default="👥 Kadrom", key="selected_page",
+# Short visible navigation labels are readable on narrow phones.
+NAV = {
+    "Kadrom": "👥 Kadrom",
+    "Analiz": "📊 Kadro Analizi",
+    "Radar": "🔎 Oyuncu Radarı",
+    "Veri": "⚙️ Veri Merkezi",
+}
+st.session_state.setdefault("nav_v2", "Kadrom")
+selected_nav = st.segmented_control(
+    "Bölüm", list(NAV), default="Kadrom", key="nav_v2",
     label_visibility="collapsed", selection_mode="single",
 )
-page = page or "👥 Kadrom"
+page = NAV[selected_nav or "Kadrom"]
 
 
 @st.cache_data(show_spinner=False)
@@ -178,7 +114,7 @@ def no_data_message(error: str | None):
     if error:
         st.caption("Kaynak bağlantısı: " + str(error)[:220])
     if st.button("Projeksiyon kaynağına git →", type="primary"):
-        st.session_state["selected_page"] = "⚙️ Veri Merkezi"
+        st.session_state["nav_v2"] = "Veri"
         st.rerun()
 
 
@@ -505,13 +441,10 @@ elif page == "⚙️ Veri Merkezi":
         st.warning("Buradaki veriler sentetiktir; NBA istatistikleri değildir.")
         if st.button("Örnek veriyi aç"):
             st.session_state["demo_data"] = pd.read_csv(ROOT / "sample_data" / "demo_season_totals.csv")
-            st.session_state["selected_page"] = "📊 Kadro Analizi"
+            st.session_state["nav_v2"] = "Analiz"
             st.rerun()
         if st.button("Örnek veri modunu kapat"):
             st.session_state.pop("demo_data", None)
             st.rerun()
 
-st.markdown('<div class="nba-divider"></div>', unsafe_allow_html=True)
-st.markdown('<p class="nba-note">Bağımsız NBA fantasy analiz aracı · Yahoo ile resmi bağlantısı yoktur. '
-            'Kadro kayıtları kalıcı bulut depolamaya henüz taşınmadı.</p>',
-            unsafe_allow_html=True)
+footer()
