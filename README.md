@@ -23,7 +23,13 @@ Uygulama tarayıcıda `http://localhost:8501` üzerinden açılır. Streamlit Co
 | emo361 | H2H Points | 227098 |
 | Bilandyczak | H2H 9-cat | 248620 |
 
-Kadro ve IL oyuncularını her takıma ayrı ayrı manuel seçip kaydedebilirsin. NBA istatistiklerini 'NBA verisini çek / yenile' ile çekebilir veya sezon toplamlarından CSV yükleyebilirsin. NBA bağlantısı çalışmazsa demo (sentetik) verisiyle arayüz denenebilir.
+Kadro ve IL oyuncularını **NBA istatistiklerini indirmeden**, ana ekrandaki **👥 Kadrom** bölümünde tek tek arayarak veya listede olmayanları isim yazarak ekleyip kaydedebilirsin. NBA istatistiklerini ayrı bir bölümde 'NBA verisini çek / yenile' ile çekebilir veya sezon toplamlarından CSV yükleyebilirsin. NBA bağlantısı çalışmazsa demo (sentetik) verisiyle arayüz denenebilir.
+
+## Kadromu nereden giriyorum?
+
+Uygulamayı açınca **👥 Kadrom** ekranı en üstte görünür; veri çekmek için beklemen gerekmez. Sol üstteki menüden takımı seç, oyuncuları arayıp ekle, IL'yi seç ve **💾 Kadroyu kaydet** butonuna bas. Yeni çaylak gibi dizinde olmayan oyuncuları 'Oyuncu listede yoksa adını yaz' alanından ekleyebilirsin. Kaydedilen adlar, NBA istatistikleri geldiğinde oyuncu adlarına göre eşleştirilir.
+
+**Uyarı:** Bu ilk sürümde Streamlit Cloud kayıtları yerel SQLite'dır. Sunucu restart/deploy sırasında kadrolar kaybolabilir; ayrıca herkese açık uygulamada giriş koruması yoktur. Kalıcı güvenli kadro depolama sonraki sürüm kapsamındadır.
 
 ## Neler var?
 
