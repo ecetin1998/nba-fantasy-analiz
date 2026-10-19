@@ -13,6 +13,7 @@ import streamlit as st
 from analysis import (CATEGORIES, POINTS_FIELDS, category_punt_view, category_team_fit,
                       category_scores, normalize, points_scores, roster_analysis)
 from data_sources import fetch_nba_totals, last_updated, load_cache, save_csv
+from roster_catalog import bundled_catalog, display_name, find_catalog_player, resolve_roster_ids
 from storage import (TEAMS, YAHOO_DEFAULT_POINTS, get_roster, get_weights,
                      init, reset_weights, save_roster, save_weights)
 
@@ -20,7 +21,7 @@ st.set_page_config(page_title="NBA Fantasy | 5 Takım Analizi", page_icon="🏀"
 init()
 
 st.title("🏀 NBA Fantasy — Kadro Analizi")
-st.caption("5 takım, 2 farklı lig formatı · Yahoo API olmadan · MVP v0.2")
+st.caption("5 takım, 2 farklı lig formatı · Yahoo API olmadan · MVP v0.3")
 
 season = st.sidebar.selectbox("Sezon", ["2025-26", "2026-27"], index=0,
     help="2026-27 normal sezonu henüz başlamadıysa 2025-26 referans alınır.")
@@ -30,6 +31,74 @@ team_meta = next(t for t in TEAMS if t[0] == team_name)
 team_type = team_meta[2]
 st.sidebar.markdown(f"**{team_name}** · {'Standart 9-cat' if team_type == 'CAT' else 'Standart Yahoo Points'} · Lig {team_meta[1]}")
 st.sidebar.info("Her takımın kadrosu ayrı saklanır. Yahoo liginin rakip kadroları bilinmiyor.")
+
+# Kadro girmek, NBA istatistikleri indirilemese bile çalışır.
+@st.cache_data(show_spinner=False)
+def player_directory() -> dict[str, str]:
+    return bundled_catalog()
+
+
+roster_ids, il_ids = get_roster(team_name)
+catalog = player_directory()
+roster_widget_key = f"roster_input_{team_name}"
+manual_widget_key = f"manual_player_{team_name}"
+for stored_id in list(roster_ids) + list(st.session_state.get(roster_widget_key, [])):
+    if stored_id not in catalog:
+        catalog[stored_id] = display_name(stored_id, catalog)
+catalog = dict(sorted(catalog.items(), key=lambda item: item[1].casefold()))
+
+with st.container(border=True):
+    st.subheader(f"👥 Kadrom · {team_name}")
+    st.caption("NBA verilerini beklemeden oyuncularını seçebilirsin. "
+               "Beş takım birbirinden bağımsız. Takım seçimi sol üstteki « menüsünde.")
+    manual_name = st.text_input("Oyuncu listede yoksa adını yaz", key=manual_widget_key,
+                                placeholder="Örn. yeni bir çaylağın tam adı")
+    if st.button("➕ İsmini yazdığım oyuncuyu kadroya ekle", key=f"manual_add_{team_name}"):
+        if not manual_name.strip():
+            st.warning("Önce oyuncunun adını yaz.")
+        else:
+            existing = list(st.session_state.get(roster_widget_key, roster_ids))
+            new_id = find_catalog_player(manual_name.strip(), catalog)
+            if new_id in existing:
+                st.info("Bu oyuncu zaten seçili.")
+            elif len(existing) >= 15:
+                st.error("En fazla 15 oyuncu seçilebilir.")
+            else:
+                st.session_state[roster_widget_key] = existing + [new_id]
+                st.rerun()
+
+    selected_roster = st.multiselect(
+        "Oyuncularım (isim yazarak ara · en fazla 15)",
+        options=list(catalog),
+        default=[pid for pid in roster_ids if pid in catalog],
+        format_func=lambda pid: display_name(pid, catalog),
+        max_selections=15, key=roster_widget_key,
+        placeholder="Oyuncu ara / seç",
+    )
+    selected_il = st.multiselect(
+        "IL / sakat listesi (en fazla 2)",
+        options=selected_roster,
+        default=[pid for pid in il_ids if pid in selected_roster],
+        format_func=lambda pid: display_name(pid, catalog),
+        max_selections=2, key=f"il_input_{team_name}",
+    )
+    st.caption(f"Seçilen: {len(selected_roster)}/15 · IL: {len(selected_il)}/2")
+    if st.button("💾 Kadroyu kaydet", type="primary", key=f"save_roster_{team_name}", use_container_width=True):
+        try:
+            save_roster(team_name, selected_roster, selected_il)
+            st.success(f"{team_name} kadrosu kaydedildi: {len(selected_roster)} oyuncu.")
+        except Exception as exc:
+            st.error(str(exc))
+    if roster_ids:
+        st.markdown("**Son kaydedilen kadro**")
+        st.dataframe(pd.DataFrame({
+            "Oyuncu": [display_name(pid, catalog) for pid in roster_ids],
+            "IL": [pid in il_ids for pid in roster_ids],
+        }), hide_index=True, use_container_width=True)
+    else:
+        st.info("Henüz kaydedilmiş oyuncu yok.")
+    st.caption("⚠️ Streamlit Cloud üzerindeki yerel kayıt sistemi geçicidir: "
+               "sunucu yeniden başladığında kadrolar sıfırlanabilir. Kalıcı veritabanı sonraki geliştirmedir.")
 
 with st.expander("📥 Oyuncu verisi · NBA'den yenile / CSV yükle", expanded=False):
     left, right = st.columns(2)
@@ -90,42 +159,13 @@ else:
     players = None
     reference_info = {}
 
-roster_ids, il_ids = get_roster(team_name)
-ids = raw["PLAYER_ID"].astype(str).tolist()
-name_by_id = dict(zip(raw["PLAYER_ID"], raw["PLAYER_NAME"]))
-team_by_id = dict(zip(raw["PLAYER_ID"], raw["TEAM_ABBREVIATION"]))
-show_name = lambda pid: f"{name_by_id.get(pid, 'Bilinmeyen ID: ' + pid)} · {team_by_id.get(pid, '?')}"
-missing_roster = [pid for pid in roster_ids if pid not in name_by_id]
-if missing_roster:
-    st.warning(f"Kadroda seçili veri setinde bulunamayan {len(missing_roster)} oyuncu var. Bunlar analiz dışında kalır: {', '.join(missing_roster)}")
-
+resolved_roster_ids, resolved_il_ids, missing_ids = resolve_roster_ids(roster_ids, il_ids, raw)
+if missing_ids:
+    st.warning(f"Sezon verisinde bulunamayan {len(missing_ids)} oyuncu analiz dışında kalıyor: "
+               + ", ".join(display_name(pid, catalog) for pid in missing_ids))
 st.subheader(f"{team_name} · {'H2H Categories' if team_type == 'CAT' else 'H2H Points'}")
-tab_roster, tab_analysis, tab_rankings, tab_candidates = st.tabs(
-    ["👥 Kadrom", "📊 Kadro analizi", "🏆 Oyuncu sıralaması", "🔎 Aday oyuncular"])
-
-with tab_roster:
-    st.write("Oyuncuları seç, varsa IL listesini işaretle ve kadroyu kaydet. Aynı NBA oyuncusu farklı fantasy takımlarında bulunabilir.")
-    roster_sel = st.multiselect("Kadro oyuncuları (en fazla 15)", options=ids,
-        default=[pid for pid in roster_ids if pid in name_by_id], format_func=show_name,
-        max_selections=15, key=f"roster_input_{team_name}")
-    il_sel = st.multiselect("IL · Analizin dışında tut (en fazla 2)",
-        options=roster_sel, default=[pid for pid in il_ids if pid in roster_sel],
-        format_func=show_name, max_selections=2, key=f"il_input_{team_name}")
-    if st.button("💾 Bu takımın kadrosunu kaydet", type="primary"):
-        try:
-            save_roster(team_name, roster_sel, il_sel)
-            st.success("Kadro yerel SQLite veritabanına kaydedildi.")
-            st.rerun()
-        except Exception as exc:
-            st.error(str(exc))
-    if roster_ids:
-        selected_table = raw[raw["PLAYER_ID"].isin(roster_ids)].copy()
-        selected_table["IL"] = selected_table["PLAYER_ID"].isin(il_ids)
-        show_cols = ["PLAYER_NAME", "TEAM_ABBREVIATION", "GP", "IL"]
-        st.dataframe(selected_table[show_cols].rename(columns={"PLAYER_NAME": "Oyuncu", "TEAM_ABBREVIATION": "NBA takımı", "GP": "Maç"}),
-                     hide_index=True, use_container_width=True)
-    else:
-        st.info("Henüz kadro kaydedilmedi. Oyuncularını seçerek başla.")
+tab_analysis, tab_rankings, tab_candidates = st.tabs(
+    ["📊 Kadro analizi", "🏆 Oyuncu sıralaması", "🔎 Aday oyuncular"])
 
 if team_type == "PTS":
     st.info("Yahoo standart H2H Points: PTS +1 · REB +1.2 · AST +1.5 · STL +3 · BLK +3 · TO −1. "
@@ -161,7 +201,7 @@ if team_type == "PTS":
             st.warning("Aday oyuncular için puanlama katsayıları gerekli.")
 
 if players is not None:
-    selected = players[players["PLAYER_ID"].isin(set(roster_ids) - set(il_ids))].copy()
+    selected = players[players["PLAYER_ID"].isin(set(resolved_roster_ids) - set(resolved_il_ids))].copy()
 
     if team_type == "CAT":
         with tab_analysis:
@@ -173,7 +213,7 @@ if players is not None:
             if selected.empty:
                 st.warning("Analiz görmek için önce 'Kadrom' sekmesinden oyuncu ekle.")
             else:
-                result, details = roster_analysis(players, roster_ids, il_ids)
+                result, details = roster_analysis(players, resolved_roster_ids, resolved_il_ids)
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Analize dahil oyuncu", details["players"])
                 c2.metric("Hacim ağırlıklı FG%", f"%{100 * details['fgm_pg'] / details['fga_pg']:.1f}" if details["fga_pg"] else "—")
@@ -184,7 +224,7 @@ if players is not None:
                     lambda r: f"{r['Kadro değeri (maç başı toplam)']*100:.1f}%" if r["Kategori"] in ("FG%", "FT%") else f"{r['Kadro değeri (maç başı toplam)']:.2f}", axis=1)
                 st.dataframe(out, hide_index=True, use_container_width=True)
                 st.markdown("**Punt ön değerlendirmesi**")
-                st.dataframe(category_punt_view(players, roster_ids, il_ids).head(5), hide_index=True, use_container_width=True)
+                st.dataframe(category_punt_view(players, resolved_roster_ids, resolved_il_ids).head(5), hide_index=True, use_container_width=True)
                 st.caption("Bu punt sıralaması yalnızca kalan sekiz kategorideki z toplamıdır; rakip ve kazanma olasılığı içermez. "
                            "Bench oyuncular potansiyel olarak oynayabilir varsayılır, IL hariç tutulur.")
 
@@ -197,8 +237,8 @@ if players is not None:
             st.caption("Hacim bazlı % etkisi, TO ters z-score ve NBA referans havuzu üzerinden hesaplanır. Bu sıralama pozisyon/sakatlık/projeksiyon içermez.")
 
         with tab_candidates:
-            exclude = set(roster_ids)
-            fit_ranked, weights_used = category_team_fit(players, roster_ids, il_ids)
+            exclude = set(resolved_roster_ids)
+            fit_ranked, weights_used = category_team_fit(players, resolved_roster_ids, resolved_il_ids)
             all_ranked = fit_ranked.sort_values("Z_TOTAL", ascending=False).copy()
             all_ranked["Genel sıra"] = range(1, len(all_ranked) + 1)
             # Scout list: start outside the overall top 35, then sort by *this* team's needs.
@@ -232,7 +272,7 @@ if players is not None:
         with tab_candidates:
             all_ranked = players.sort_values("FPTS_PG", ascending=False).copy()
             all_ranked["Genel sıra"] = range(1, len(all_ranked) + 1)
-            available = all_ranked[(all_ranked["Genel sıra"].between(36, 185)) & ~all_ranked["PLAYER_ID"].isin(roster_ids)].copy()
+            available = all_ranked[(all_ranked["Genel sıra"].between(36, 185)) & ~all_ranked["PLAYER_ID"].isin(resolved_roster_ids)].copy()
             weakest = float(selected["FPTS_PG"].min()) if not selected.empty else None
             if weakest is not None:
                 available["En düşük kadro oyuncusuna göre fark"] = available["FPTS_PG"] - weakest
@@ -245,5 +285,5 @@ if players is not None:
             st.caption("Oyuncuların Yahoo waiver durumu bilinmiyor; bu liste roster dışındaki adayları sıralar.")
 
 st.divider()
-st.caption("MVP v0.2 · Henüz yok: gerçek Yahoo waiver sahipliği, canlı sakatlık, 7/15/30 gün formu, NBA haftalık fikstür ve rakip tahmini. "
+st.caption("MVP v0.3 · Henüz yok: gerçek Yahoo waiver sahipliği, canlı sakatlık, 7/15/30 gün formu, NBA haftalık fikstür ve rakip tahmini. "
            "NBA API kesintisinde manuel CSV yedeği kullanılabilir. Veri uygulamayı çalıştırdığın bilgisayarda tutulur.")
